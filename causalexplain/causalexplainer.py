@@ -20,10 +20,10 @@ from causalexplain.metrics.compare_graphs import evaluate_graph
 class GraphDiscovery:
     def __init__(
         self,
-        experiment_name: str,
-        model_type: str,
-        csv_filename: str,
-        true_dag_filename: str,
+        experiment_name: str=None,
+        model_type: str=None,
+        csv_filename: str=None,
+        true_dag_filename: str=None,
         verbose: bool = False,
         seed: int = 42
     ) -> None:
@@ -33,9 +33,14 @@ class GraphDiscovery:
         self.dot_filename = true_dag_filename
         self.verbose = verbose
         self.seed = seed
+
+        if experiment_name is None or model_type is None or csv_filename is None:
+            return
+
         self.dataset_path = os.path.dirname(csv_filename)
         self.output_path = os.getcwd()
         self.trainer = {}
+
 
         # Read the reference graph
         self.ref_graph = utils.graph_from_dot_file(true_dag_filename)
@@ -184,7 +189,7 @@ class GraphDiscovery:
         self.combine_and_evaluate_dags()
 
 
-    def save_model(
+    def save(
         self,
         output_path: str,
     ) -> None:
@@ -201,11 +206,12 @@ class GraphDiscovery:
         else:
             trainer_name = f"{self.dataset_name}_{self.estimator}"
         
+        output_path = os.path.basedir(output_path)
         saved_as = utils.save_experiment(
             trainer_name, output_path, self.trainer, overwrite=False)
         print(f"Saved model as: {saved_as}", flush=True)
 
-    def load_models(self, model_path: str) -> Experiment:
+    def load(self, model_path: str) -> Experiment:
         """
         Load the model from a pickle file.
 
@@ -302,11 +308,12 @@ class GraphDiscovery:
         dag : nx.DiGraph
             The DAG to be plotted.
         """
-        model = self.trainer[list(self.trainer.keys())[0]]
+        model = self.trainer[list(self.trainer.keys())[-1]]
         if model.ref_graph is not None:
             ref_graph = model.ref_graph
         else:
             ref_graph = None
         plot.dag(
-            model.dag, ref_graph, show_metrics, show_node_fill, title, ax, 
-            figsize, dpi, save_to_pdf, **kwargs)
+            graph=model.dag, reference=ref_graph, show_metrics=show_metrics, 
+            show_node_fill=show_node_fill, title=title, ax=ax, 
+            figsize=figsize, dpi=dpi, save_to_pdf=save_to_pdf, **kwargs)

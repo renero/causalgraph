@@ -21,6 +21,7 @@ pandas
 pydot
 pydotplus
 pygam==0.9.0
+pygraphviz
 pytest
 python_igraph
 rich
