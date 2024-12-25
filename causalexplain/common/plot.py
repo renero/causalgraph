@@ -31,7 +31,7 @@ from sklearn.base import BaseEstimator
 from sklearn.preprocessing import StandardScaler
 
 from causalexplain.metrics.compare_graphs import evaluate_graph
-
+from .metrics_config import global_nc_metric_types, global_metric_types
 
 metric_labels = {
     'mlp': 'DFN',
@@ -626,7 +626,8 @@ def hierarchies(hierarchies, threshold=0.5, **kwargs):
         - threshold (float)
             Threshold for the correlation.
         - **kwargs
-            Additional keyword arguments to be passed to the correlation_matrix function.
+            Additional keyword arguments to be passed to the correlation_matrix 
+                function.
 
     Returns
     -------
@@ -667,7 +668,8 @@ def dag(
     reference: The reference DAG.
     root_causes: The root causes of the graph.
     show_metrics: Whether to show the metrics of the graph.
-    show_node_fill: Whether to show the node fill (corresponding to the root causes).
+    show_node_fill: Whether to show the node fill (corresponding to the 
+        root causes).
     title: The title of the graph.
     ax: The axis in which to draw the graph.
     figsize: The size of the figure.
