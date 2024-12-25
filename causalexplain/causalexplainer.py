@@ -20,13 +20,48 @@ from causalexplain.metrics.compare_graphs import evaluate_graph
 class GraphDiscovery:
     def __init__(
         self,
-        experiment_name: str=None,
-        model_type: str=None,
-        csv_filename: str=None,
-        true_dag_filename: str=None,
+        experiment_name: str = None,
+        model_type: str = 'rex',
+        csv_filename: str = None,
+        true_dag_filename: str = None,
         verbose: bool = False,
         seed: int = 42
     ) -> None:
+        """
+        Initializes a new instance of the GraphDiscovery class.
+
+        Args:
+            experiment_name (str, optional): The name of the experiment.
+            model_type (str, optional): The type of model to use. Valid options
+                are: 'rex', 'pc', 'fci', 'ges', 'lingam', 'cam', 'notears'.
+            csv_filename (str, optional): The filename of the CSV file containing
+                the data.
+            true_dag_filename (str, optional): The filename of the DOT file
+                containing the true causal graph.
+            verbose (bool, optional): Whether to print verbose output.
+            seed (int, optional): The random seed for reproducibility.
+        """
+        # Normalize empty/whitespace strings to None
+        experiment_name = experiment_name.strip() if isinstance(experiment_name, str) else experiment_name
+        experiment_name = None if experiment_name == "" else experiment_name
+        csv_filename = csv_filename.strip() if isinstance(csv_filename, str) else csv_filename
+        csv_filename = None if csv_filename == "" else csv_filename
+
+        if (experiment_name is None and csv_filename is not None) or \
+                (experiment_name is not None and csv_filename is None):
+            raise ValueError(
+                f"Both 'experiment_name' and 'csv_filename' must be provided together, "
+                f"or none of them. Got experiment_name='{experiment_name}', "
+                f"csv_filename='{csv_filename}'")
+        elif experiment_name is None and csv_filename is None:
+            self.experiment_name = None
+            self.estimator = 'rex'
+            self.csv_filename = None
+            self.dot_filename = None
+            self.verbose = False
+            self.seed = 42
+            return
+
         self.experiment_name = experiment_name
         self.estimator = model_type
         self.csv_filename = csv_filename
@@ -34,13 +69,9 @@ class GraphDiscovery:
         self.verbose = verbose
         self.seed = seed
 
-        if experiment_name is None or model_type is None or csv_filename is None:
-            return
-
         self.dataset_path = os.path.dirname(csv_filename)
         self.output_path = os.getcwd()
         self.trainer = {}
-
 
         # Read the reference graph
         self.ref_graph = utils.graph_from_dot_file(true_dag_filename)
@@ -59,7 +90,6 @@ class GraphDiscovery:
             self.regressors = DEFAULT_REGRESSORS
         else:
             self.regressors = [self.estimator]
-
 
     def create_experiments(self) -> dict:
         """
@@ -92,7 +122,8 @@ class GraphDiscovery:
     def fit_experiments(
         self,
         hpo_iterations: int = None,
-        bootstrap_iterations: int = None
+        bootstrap_iterations: int = None,
+        **kwargs
     ) -> None:
         """
         Fit the Experiment objects.
@@ -118,6 +149,9 @@ class GraphDiscovery:
                 'verbose': self.verbose
             }
 
+        # Combine the arguments
+        xargs.update(kwargs)
+
         for trainer_name, experiment in self.trainer.items():
             if not trainer_name.endswith("_rex"):
                 experiment.fit_predict(estimator=self.estimator, **xargs)
@@ -139,6 +173,8 @@ class GraphDiscovery:
             else:
                 self.trainer[trainer_key].metrics = None
 
+            self.dag = self.trainer[trainer_key].dag
+            self.metrics = self.trainer[trainer_key].metrics
             return self.trainer[trainer_key]
 
         # For ReX, we need to combine the DAGs. Hardcode for now to combine
@@ -146,8 +182,8 @@ class GraphDiscovery:
         estimator1 = getattr(self.trainer[list(self.trainer.keys())[0]], 'rex')
         estimator2 = getattr(self.trainer[list(self.trainer.keys())[1]], 'rex')
         _, _, dag, _ = utils.combine_dags(estimator1.dag, estimator2.dag,
-                                        estimator1.shaps.shap_discrepancies)
-        
+                                          estimator1.shaps.shap_discrepancies)
+
         # Create a new Experiment object for the combined DAG
         new_trainer = f"{self.dataset_name}_rex"
         if new_trainer in self.trainer:
@@ -168,12 +204,14 @@ class GraphDiscovery:
         else:
             self.trainer[new_trainer].metrics = None
 
+        self.dag = self.trainer[new_trainer].dag
+        self.metrics = self.trainer[new_trainer].metrics
         return self.trainer[new_trainer]
 
     def run(
-            self, 
-            hpo_iterations: int = None, 
-            bootstrap_iterations: int = None, 
+            self,
+            hpo_iterations: int = None,
+            bootstrap_iterations: int = None,
             **kwargs):
         """
         Run the experiment.
@@ -185,30 +223,28 @@ class GraphDiscovery:
                 for REX. Defaults to None.
         """
         self.create_experiments()
-        self.fit_experiments(hpo_iterations, bootstrap_iterations)
+        self.fit_experiments(hpo_iterations, bootstrap_iterations, **kwargs)
         self.combine_and_evaluate_dags()
 
-
-    def save(
-        self,
-        output_path: str,
-    ) -> None:
+    def save(self, full_filename_path: str) -> None:
         """
         Save the model as an Experiment object.
 
         Args:
-            trainer (dict): A dictionary of Experiment objects
-            output_path (str): Directory path where to save the model
+            full_filename_path (str): A full path where to save the model,
+                including the filename.
         """
-        if self.estimator == 'rex':
-            # Save trainer with the name of tha last experiment_name in dictionary
-            trainer_name = list(self.trainer.keys())[-1]
-        else:
-            trainer_name = f"{self.dataset_name}_{self.estimator}"
-        
-        output_path = os.path.basedir(output_path)
+        assert self.trainer, "No trainer to save"
+        assert full_filename_path, "No output path specified"
+
+        trainer_name = os.path.splitext(
+            os.path.basename(full_filename_path))[0]
+        full_dir_path = os.path.dirname(full_filename_path)
+        assert os.path.exists(full_dir_path), \
+            f"Output directory {full_dir_path} does not exist"
+
         saved_as = utils.save_experiment(
-            trainer_name, output_path, self.trainer, overwrite=False)
+            trainer_name, full_dir_path, self.trainer, overwrite=False)
         print(f"Saved model as: {saved_as}", flush=True)
 
     def load(self, model_path: str) -> Experiment:
@@ -225,6 +261,9 @@ class GraphDiscovery:
             self.trainer = pickle.load(f)
             print(f"Loaded model from: {model_path}", flush=True)
 
+        # Set the dag and metrics
+        self.dag = self.trainer[list(self.trainer.keys())[-1]].dag
+        self.metrics = self.trainer[list(self.trainer.keys())[-1]].metrics
         return self.trainer
 
     def printout_results(self, graph, metrics):
@@ -246,14 +285,14 @@ class GraphDiscovery:
             if node in visited:
                 return  # Avoid revisiting nodes
             visited.add(node)
-            
+
             # Print edges for this node
             for neighbor in graph.successors(node):
                 print(f"{indent}{node} -> {neighbor}")
                 dfs(neighbor, visited, indent + "  ")
-            
+
         visited = set()
-        
+
         # Start traversal from all nodes without predecessors (roots)
         for node in graph.nodes:
             if graph.in_degree(node) == 0:
@@ -268,7 +307,7 @@ class GraphDiscovery:
             print("\nGraph Metrics:\n-------------")
             print(metrics)
 
-    def export(self, output_file:str) -> str:
+    def export(self, output_file: str) -> str:
         """
         This method exports the DAG to a DOT file.
 
@@ -285,21 +324,21 @@ class GraphDiscovery:
             The path to the output DOT file.
         """
         saved_as = utils.graph_to_dot_file(
-            self.trainer[list(self.trainer.keys())[0]].dag, output_file)
+            self.trainer[list(self.trainer.keys())[-1]].dag, output_file)
 
         return saved_as
 
     def plot(
-            self, 
-            show_metrics: bool = False, 
-            show_node_fill: bool = True,
-            title: str = None,
-            ax: plt.Axes = None,
-            figsize: Tuple[int, int] = (5, 5),
-            dpi: int = 75,
-            save_to_pdf: str = None,
-            **kwargs
-        ):
+        self,
+        show_metrics: bool = False,
+        show_node_fill: bool = True,
+        title: str = None,
+        ax: plt.Axes = None,
+        figsize: Tuple[int, int] = (5, 5),
+        dpi: int = 75,
+        save_to_pdf: str = None,
+        **kwargs
+    ):
         """
         This method plots the DAG using networkx and matplotlib.
 
@@ -314,6 +353,6 @@ class GraphDiscovery:
         else:
             ref_graph = None
         plot.dag(
-            graph=model.dag, reference=ref_graph, show_metrics=show_metrics, 
-            show_node_fill=show_node_fill, title=title, ax=ax, 
+            graph=model.dag, reference=ref_graph, show_metrics=show_metrics,
+            show_node_fill=show_node_fill, title=title, ax=ax,
             figsize=figsize, dpi=dpi, save_to_pdf=save_to_pdf, **kwargs)

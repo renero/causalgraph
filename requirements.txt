@@ -23,6 +23,7 @@ pydotplus
 pygam==0.9.0
 pygraphviz
 pytest
+pytest-mock
 python_igraph
 rich
 scikit-learn
