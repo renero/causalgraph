@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 0
 
       - name: Cache dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -44,9 +44,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y graphviz libgraphviz-dev pkg-config
-          ls -la /usr/include/graphviz/  # Debug: check if headers are installed
-          dpkg -L libgraphviz-dev  # Debug: list all files installed by the package
-          pkg-config --libs-only-L libcgraph  # Debug: check graphviz configuration using correct package name
+          ls -la /usr/include/graphviz/
+          dpkg -L libgraphviz-dev
+          pkg-config --libs-only-L libcgraph
 
       - name: Install requirements
         run: pip install -r requirements.txt
