@@ -43,9 +43,10 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y graphviz graphviz-dev libgraphviz-dev pkg-config
+          sudo apt-get install -y graphviz libgraphviz-dev pkg-config
           ls -la /usr/include/graphviz/  # Debug: check if headers are installed
-          pkg-config --libs-only-L libgraphviz  # Debug: check graphviz configuration
+          dpkg -L libgraphviz-dev  # Debug: list all files installed by the package
+          pkg-config --libs-only-L libcgraph  # Debug: check graphviz configuration using correct package name
 
       - name: Install requirements
         run: pip install -r requirements.txt
