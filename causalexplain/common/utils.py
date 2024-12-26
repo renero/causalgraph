@@ -63,7 +63,8 @@ def save_experiment(
     if not overwrite:
         output = valid_output_name(obj_name, folder, extension="pickle")
     else:
-        output = join(folder, obj_name + ".pickle")
+        output = join(folder, obj_name if obj_name.endswith('.pickle') \
+            else obj_name + '.pickle')
 
     with open(output, 'wb') as handle:
         pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -121,7 +122,10 @@ def valid_output_name(filename: str, path: str, extension=None) -> str:
     if extension:
         if extension[0] == '.':
             extension = extension[1:]
-        base_filepath = join(path, filename) + '.{}'.format(extension)
+        if filename.endswith(f".{extension}"):
+            base_filepath = join(path, filename)
+        else:
+            base_filepath = join(path, filename) + '.{}'.format(extension)
     else:
         base_filepath = join(path, filename)
     output_filepath = base_filepath

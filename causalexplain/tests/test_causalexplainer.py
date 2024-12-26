@@ -4,6 +4,7 @@ from causalexplain.causalexplainer import GraphDiscovery
 from causalexplain.common import DEFAULT_REGRESSORS
 import os
 
+
 @pytest.fixture
 def sample_csv(tmp_path):
     # Create a temporary CSV file
@@ -102,7 +103,8 @@ def test_partial_initialization():
 
 
 def test_mismatched_experiment_name_and_csv():
-    """Test that providing only experiment_name or only csv_filename raises ValueError"""
+    """Test that providing only experiment_name or only csv_filename 
+    raises ValueError"""
     # Test providing only experiment_name
     with pytest.raises(ValueError) as exc_info:
         GraphDiscovery(experiment_name="test_exp", csv_filename=None)
@@ -220,107 +222,3 @@ def test_create_experiments_empty_regressors(mock_experiment, sample_csv, sample
     assert len(trainers) == 0
     mock_experiment.assert_not_called()
 
-
-# def test_fit_experiments_rex(mocker, sample_csv, sample_dot):
-#     """Test fit_experiments with rex estimator"""
-#     # Mock Experiment class
-#     mock_experiment = mocker.MagicMock()
-#     mocker.patch(
-#         'causalexplain.causalexplainer.Experiment', return_value=mock_experiment)
-
-#     # Initialize GraphDiscovery with rex estimator
-#     gd = GraphDiscovery(
-#         csv_filename=sample_csv,
-#         dot_filename=sample_dot,
-#         estimator='rex',
-#         verbose=True
-#     )
-
-#     # Create experiments and fit them
-#     gd.create_experiments()
-#     gd.fit_experiments(hpo_iterations=5, bootstrap_iterations=3)
-
-#     # Verify that fit_predict was called with correct arguments
-#     for trainer_name, experiment in gd.trainer.items():
-#         if not trainer_name.endswith("_rex"):
-#             experiment.fit_predict.assert_called_once()
-#             call_args = experiment.fit_predict.call_args[1]
-#             assert call_args['estimator'] == 'rex'
-#             assert call_args['verbose'] is True
-#             assert call_args['hpo_n_trials'] == 5
-#             assert call_args['bootstrap_trials'] == 3
-
-
-# def test_fit_experiments_non_rex(mocker, sample_csv, sample_dot):
-#     """Test fit_experiments with non-rex estimator"""
-#     # Mock Experiment class
-#     mock_experiment = mocker.MagicMock()
-#     mocker.patch(
-#         'causalexplain.causalexplainer.Experiment', return_value=mock_experiment)
-
-#     # Initialize GraphDiscovery with non-rex estimator
-#     gd = GraphDiscovery(
-#         csv_filename=sample_csv,
-#         dot_filename=sample_dot,
-#         estimator='linear',
-#         verbose=True
-#     )
-
-#     # Create experiments and fit them
-#     gd.create_experiments()
-#     gd.fit_experiments()
-
-#     # Verify that fit_predict was called with correct arguments
-#     for trainer_name, experiment in gd.trainer.items():
-#         if not trainer_name.endswith("_rex"):
-#             experiment.fit_predict.assert_called_once()
-#             call_args = experiment.fit_predict.call_args[1]
-#             assert call_args['estimator'] == 'linear'
-#             assert call_args['verbose'] is True
-
-
-# def test_fit_experiments_with_additional_kwargs(mocker, sample_csv, sample_dot):
-#     """Test fit_experiments with additional kwargs"""
-#     # Mock Experiment class
-#     mock_experiment = mocker.MagicMock()
-#     mocker.patch(
-#         'causalexplain.causalexplainer.Experiment', return_value=mock_experiment)
-
-#     # Initialize GraphDiscovery
-#     gd = GraphDiscovery(
-#         csv_filename=sample_csv,
-#         dot_filename=sample_dot,
-#         estimator='linear',
-#         verbose=True
-#     )
-
-#     # Create experiments and fit them with additional kwargs
-#     gd.create_experiments()
-#     gd.fit_experiments(custom_param=42, another_param='test')
-
-#     # Verify that fit_predict was called with correct arguments including
-#     # additional kwargs
-#     for trainer_name, experiment in gd.trainer.items():
-#         if not trainer_name.endswith("_rex"):
-#             experiment.fit_predict.assert_called_once()
-#             call_args = experiment.fit_predict.call_args[1]
-#             assert call_args['estimator'] == 'linear'
-#             assert call_args['verbose'] is True
-#             assert call_args['custom_param'] == 42
-#             assert call_args['another_param'] == 'test'
-
-
-# def test_fit_experiments_without_create_experiments(mocker, sample_csv, sample_dot):
-#     """Test fit_experiments without calling create_experiments first"""
-#     # Initialize GraphDiscovery
-#     gd = GraphDiscovery(
-#         csv_filename=sample_csv,
-#         dot_filename=sample_dot,
-#         estimator='linear'
-#     )
-
-#     # Try to fit experiments without creating them first
-#     gd.fit_experiments()
-
-#     # Verify that trainer is empty
-#     assert len(gd.trainer) == 0

@@ -20,7 +20,7 @@
                 // "-m", "rex",
                 "-i", "1",
                 "-b", "1",
-                "-s",
+                "-s", "./prueba.pickle"
             ],
             "console": "integratedTerminal",
             "justMyCode": false,

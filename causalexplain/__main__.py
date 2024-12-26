@@ -16,7 +16,6 @@
 
 import argparse
 import os
-from pdb import run
 import pandas as pd
 
 from causalexplain.common import (
@@ -47,7 +46,7 @@ def parse_args():
         description="Causal Graph Learning with ReX and other compared methods.",
     )
     parser.add_argument(
-        '-d', '--dataset', type=str, required=True,
+        '-d', '--dataset', type=str, required=False,
         help='Dataset name. Must be CSV file with headers and comma separated columns')
     parser.add_argument(
         '-m', '--method', type=str, required=False,
@@ -115,19 +114,29 @@ def check_args_validity(args):
             "Method must be one of: rex, pc, fci, ges, lingam, cam, notears"
         run_values['estimator'] = str(args.method)
 
-    # Check that the dataset file exist, and load it (data)
-    assert args.dataset is not None, "Dataset file must be specified"
-    assert os.path.isfile(args.dataset), \
-        f"Dataset file '{args.dataset}' does not exist"
-    run_values['data'] = pd.read_csv(args.dataset)
-    run_values['data_columns'] = list(run_values['data'].columns)
-    del run_values['data']
-    run_values['dataset_filepath'] = args.dataset
+    # Check that either dataset is provided or both load_model and no_train 
+    # are specified
+    if args.dataset is None:
+        if not (args.load_model and args.no_train):
+            raise ValueError(
+                "When dataset is not specified, both load_model (-l) and "
+                "no_train (-n) options must be provided")
+        else:
+            run_values['dataset_name'] = None
+            run_values['dataset_filepath'] = None
+    else:
+        # If dataset is provided, check that it exists and load it
+        assert os.path.isfile(args.dataset), \
+            f"Dataset file '{args.dataset}' does not exist"
+        run_values['data'] = pd.read_csv(args.dataset)
+        run_values['data_columns'] = list(run_values['data'].columns)
+        del run_values['data']
+        run_values['dataset_filepath'] = args.dataset
 
-    # Extract the path from where the dataset is, dataset basename
-    run_values['dataset_path'] = os.path.dirname(args.dataset)
-    dataset_name = os.path.basename(args.dataset)
-    run_values['dataset_name'] = dataset_name.replace('.csv', '')
+        # Extract the path from where the dataset is, dataset basename
+        run_values['dataset_path'] = os.path.dirname(args.dataset)
+        dataset_name = os.path.basename(args.dataset)
+        run_values['dataset_name'] = dataset_name.replace('.csv', '')
 
     # Load true DAG, if specified (true_dag)
     run_values['true_dag'] = None
@@ -135,10 +144,11 @@ def check_args_validity(args):
         assert '.dot' in args.true_dag, "True DAG must be in .dot format"
         assert os.path.isfile(args.true_dag), "True DAG file does not exist"
         run_values['ref_graph'] = utils.graph_from_dot_file(args.true_dag)
+        run_values['true_dag'] = args.true_dag
 
     # Check if 'args.load_mode' does not contain path information. In that case
     # assume it is located in the current directory
-    if not os.path.isabs(args.load_model):
+    if args.load_model is not None and not os.path.isabs(args.load_model):
         args.load_model = os.path.join(os.getcwd(), args.load_model)
     if args.load_model and not os.path.isfile(args.load_model):
         raise FileNotFoundError("Model file does not exist")
@@ -220,42 +230,33 @@ def main():
 
     # Create a new instance of GraphDiscovery
     discoverer = GraphDiscovery(
-        experiment_name=run_values['dataset_name'], 
+        experiment_name=run_values['dataset_name'],
         model_type=run_values['estimator'],
-        csv_filename=run_values['dataset_filepath'], 
+        csv_filename=run_values['dataset_filepath'],
         true_dag_filename=run_values['true_dag'],
-        verbose=run_values['verbose'], 
+        verbose=run_values['verbose'],
         seed=run_values['seed']
     )
 
     if run_values['load_model'] is not None:
-        discoverer.load_models(run_values['load_model'])
+        discoverer.load(run_values['load_model'])
         # In case of REX, trainer contains multiple entries in the dictionary
         # and we need to retrieve the last one, but in the case of others, we
         # just need to retrieve the only entry.
         result = next(reversed(discoverer.trainer.values()))
     else:
-        discoverer.create_experiments(
-            run_values['regressors'],
-            run_values['dataset_path'],
-            run_values['output_path']
-        )
+        discoverer.create_experiments()
 
     if not run_values['no_train']:
         discoverer.fit_experiments(
             run_values['hpo_iterations'],
             run_values['bootstrap_iterations']
         )
-        result = discoverer.combine_and_evaluate_dags(
-            run_values['dataset_path'],
-            run_values['output_path'],
-            run_values['ref_graph'],
-            run_values['data_columns'] if 'data_columns' in run_values else None
-        )
+        result = discoverer.combine_and_evaluate_dags()
 
     discoverer.printout_results(result.dag, result.metrics)
     if run_values['output_path'] is not None:
-        discoverer.save_model(run_values['output_path'])
+        discoverer.save(run_values['model_filename'])
 
     if run_values['output_dag_file'] is not None:
         utils.graph_to_dot_file(result.dag, run_values['output_dag_file'])
