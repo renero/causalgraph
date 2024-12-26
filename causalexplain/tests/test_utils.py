@@ -12,14 +12,16 @@ from causalexplain.common import utils
 
 
 class TestSelectDevice:
-    # Tests that the function returns 'cuda' when force is 'cuda' and cuda is available
+    # Tests that the function returns 'cuda' when force is 'cuda' and cuda is
+    # available
     def test_returns_cuda_when_force_is_cuda_and_cuda_is_not_available(self):
         # Try to force cuda when cuda is not available
         # Should raise a ValueError
         with pytest.raises(ValueError):
             utils.select_device(force='cuda')
 
-    # Tests that the function returns 'mps' when force is 'mps' and mps is available
+    # Tests that the function returns 'mps' when force is 'mps' and mps is
+    # available
 
     def test_returns_mps_when_force_is_mps_and_mps_is_available(self):
         result = utils.select_device(force='mps')
@@ -28,13 +30,15 @@ class TestSelectDevice:
         else:
             assert result == 'cpu'
 
-    # Tests that the function returns 'cpu' when force is 'cpu' and no other options are available
+    # Tests that the function returns 'cpu' when force is 'cpu' and no other
+    # options are available
 
     def test_returns_cpu_when_force_is_cpu_and_no_other_options_are_available(self):
         result = utils.select_device(force='cpu')
         assert result == 'cpu'
 
-    # Tests that the function returns 'mps' when mps is available and no force is specified
+    # Tests that the function returns 'mps' when mps is available and no force
+    # is specified
 
     def test_returns_mps_when_mps_is_available_and_no_force_is_specified(self):
         result = utils.select_device()
@@ -43,7 +47,8 @@ class TestSelectDevice:
         else:
             assert result == 'cpu'
 
-    # Tests that the function returns 'cpu' when no other options are available and no force is specified
+    # Tests that the function returns 'cpu' when no other options are available
+    # and no force is specified
 
     def test_returns_cpu_when_no_other_options_are_available_and_no_force_is_specified(self):
         result = utils.select_device()
@@ -188,16 +193,19 @@ class TestGraphUnion:
 
         assert isinstance(union_graph, nx.DiGraph)
         assert set(union_graph.nodes()) == {"A", "B", "C", "D", "E", "F"}
-        assert set(union_graph.edges()) == {("A", "B"), ("B", "C"), ("D", "E"), ("E", "F")}
+        assert set(union_graph.edges()) == {("A", "B"), ("B", "C"), ("D", "E"),
+                                            ("E", "F")}
 
     def test_union_overlapping_graphs(self):
         g1 = nx.DiGraph()
         g1.add_edges_from([("A", "B"), ("B", "C")])
-        nx.set_node_attributes(g1, {"A": {"weight": 1}, "B": {"weight": 2}, "C": {"weight": 3}})
+        nx.set_node_attributes(g1, {"A": {"weight": 1}, "B": {
+                               "weight": 2}, "C": {"weight": 3}})
 
         g2 = nx.DiGraph()
         g2.add_edges_from([("B", "C"), ("C", "D")])
-        nx.set_node_attributes(g2, {"B": {"weight": 3}, "C": {"weight": 4}, "D": {"weight": 5}})
+        nx.set_node_attributes(g2, {"B": {"weight": 3}, "C": {
+                               "weight": 4}, "D": {"weight": 5}})
 
         union_graph = utils.graph_union(g1, g2)
 
@@ -340,9 +348,9 @@ class TestSaveExperiment:
         folder = os.path.join(self.tmp_path, "new_folder")
         obj_name = "test_experiment"
         results = {"key0": "value0"}
-        
+
         output = utils.save_experiment(obj_name, str(folder), results)
-        
+
         assert os.path.exists(folder)
         assert os.path.exists(output)
 
@@ -350,14 +358,15 @@ class TestSaveExperiment:
         folder = os.path.join(self.tmp_path, "new_folder")
         obj_name = "test_experiment"
         results = {"key2": "valu2e"}
-        
+
         # Create an existing file
         existing_file = os.path.join(folder, f"{obj_name}.pickle")
         with open(existing_file, 'wb') as f:
             pickle.dump({}, f)
-        
-        output = utils.save_experiment(obj_name, str(folder), results, overwrite=True)
-        
+
+        output = utils.save_experiment(
+            obj_name, str(folder), results, overwrite=True)
+
         assert os.path.exists(output)
         with open(output, 'rb') as f:
             data = pickle.load(f)
@@ -367,15 +376,15 @@ class TestSaveExperiment:
         folder = os.path.join(self.tmp_path, "new_folder")
         obj_name = "test_experiment"
         results = {"key3": "value3"}
-        
+
         # Create an existing file
         existing_file = os.path.join(folder, f"{obj_name}.pickle")
         with open(existing_file, 'wb') as f:
             pickle.dump({}, f)
-        
+
         output = utils.save_experiment(
             obj_name, str(folder), results, overwrite=False)
-        
+
         assert os.path.exists(output)
         with open(output, 'rb') as f:
             data = pickle.load(f)
@@ -385,10 +394,10 @@ class TestSaveExperiment:
         folder = os.path.join(self.tmp_path, "new_folder")
         obj_name = "test_experiment"
         results = {"key": "value"}
-        
+
         output = utils.save_experiment(
             obj_name, str(folder), results, overwrite=True)
-        
+
         expected_output = os.path.join(folder, f"{obj_name}.pickle")
         assert output == str(expected_output)
 
@@ -396,10 +405,26 @@ class TestSaveExperiment:
         folder = os.path.join(self.tmp_path, "new_folder")
         obj_name = "test_experiment"
         results = {"key": "value"}
-        
+
         output = utils.save_experiment(
             obj_name, str(folder), results, overwrite=True)
-        
+
+        with open(output, 'rb') as f:
+            data = pickle.load(f)
+        assert data == results
+
+    def test_save_experiment_with_pickle_extension(self):
+        folder = os.path.join(self.tmp_path, "pickle_folder")
+        obj_name = "test_experiment.pickle"  # Already has .pickle extension
+        results = {"key": "value"}
+
+        output = utils.save_experiment(
+            obj_name, str(folder), results, overwrite=True)
+
+        # Should not add another .pickle
+        expected_output = os.path.join(folder, obj_name)
+        assert output == str(expected_output)
+        assert os.path.exists(output)
         with open(output, 'rb') as f:
             data = pickle.load(f)
         assert data == results
@@ -479,6 +504,21 @@ class TestValidOutputName:
 
         # Test for a filename without extension
         result = utils.valid_output_name(filename, path)
+        expected = os.path.join(path, filename)
+
+        assert result == expected
+
+    def test_valid_output_name_with_pickle_extension(self):
+        path = os.path.join(self.tmp_path, "pickle_ext_folder")
+        filename = "test_file.pickle"  # Already has .pickle extension
+        extension = "pickle"
+
+        # Ensure the folder exists
+        os.makedirs(path, exist_ok=True)
+
+        # Test for a filename that already has the extension
+        result = utils.valid_output_name(filename, path, extension)
+        # Should not add another .pickle
         expected = os.path.join(path, filename)
 
         assert result == expected
@@ -613,7 +653,8 @@ class TestGraphFromAdjacency:
             [0, 0, -0.2],
             [0.3, 0, 0]
         ])
-        graph = utils.graph_from_adjacency(adjacency, absolute_values=True, th=0.25)
+        graph = utils.graph_from_adjacency(
+            adjacency, absolute_values=True, th=0.25)
 
         assert isinstance(graph, nx.DiGraph)
         assert set(graph.nodes()) == {0, 1, 2}
@@ -659,7 +700,8 @@ class TestGraphFromAdjacencyFile:
             f.write(content)
 
         labels = ['A', 'B', 'C']
-        graph, df = utils.graph_from_adjacency_file(file_path, labels=labels, header=False)
+        graph, df = utils.graph_from_adjacency_file(
+            file_path, labels=labels, header=False)
 
         assert isinstance(graph, nx.DiGraph)
         assert set(graph.nodes()) == {'A', 'B', 'C'}
@@ -688,7 +730,8 @@ class TestGraphFromAdjacencyFile:
             f.write(content)
 
         custom_labels = ['X', 'Y', 'Z']
-        graph, df = utils.graph_from_adjacency_file(file_path, labels=custom_labels, header=False)
+        graph, df = utils.graph_from_adjacency_file(
+            file_path, labels=custom_labels, header=False)
 
         assert isinstance(graph, nx.DiGraph)
         assert set(graph.nodes()) == {'X', 'Y', 'Z'}
@@ -723,7 +766,8 @@ class TestGraphToAdjacency:
         graph.add_edge('C', 'A', custom_weight=4)
         labels = ['A', 'B', 'C']
 
-        adjacency_matrix = utils.graph_to_adjacency(graph, labels, weight_label='custom_weight')
+        adjacency_matrix = utils.graph_to_adjacency(
+            graph, labels, weight_label='custom_weight')
 
         expected_matrix = np.array([
             [0, 2, 0],
@@ -824,7 +868,8 @@ class TestCorrectEdgeFromPrior:
         dag.add_edge('A', 'B')
         prior = [['A', 'B'], ['C']]
 
-        orientation = utils.correct_edge_from_prior(dag, 'A', 'B', prior, verbose=False)
+        orientation = utils.correct_edge_from_prior(
+            dag, 'A', 'B', prior, verbose=False)
 
         assert orientation == +1
         assert not dag.has_edge('A', 'B')
@@ -833,7 +878,8 @@ class TestCorrectEdgeFromPrior:
         dag = nx.DiGraph()
         prior = [['A'], ['B', 'C']]
 
-        orientation = utils.correct_edge_from_prior(dag, 'A', 'B', prior, verbose=False)
+        orientation = utils.correct_edge_from_prior(
+            dag, 'A', 'B', prior, verbose=False)
 
         assert orientation == +1
         assert dag.has_edge('A', 'B')
@@ -842,7 +888,8 @@ class TestCorrectEdgeFromPrior:
         dag = nx.DiGraph()
         prior = [['B'], ['A']]
 
-        orientation = utils.correct_edge_from_prior(dag, 'A', 'B', prior, verbose=False)
+        orientation = utils.correct_edge_from_prior(
+            dag, 'A', 'B', prior, verbose=False)
 
         assert orientation == -1
         assert not dag.has_edge('B', 'A')
@@ -852,7 +899,8 @@ class TestCorrectEdgeFromPrior:
         dag.add_edge('A', 'B')
         prior = [['A'], ['C'], ['B']]
 
-        orientation = utils.correct_edge_from_prior(dag, 'A', 'B', prior, verbose=False)
+        orientation = utils.correct_edge_from_prior(
+            dag, 'A', 'B', prior, verbose=False)
 
         assert orientation == 1
         assert dag.has_edge('A', 'B')
@@ -862,7 +910,8 @@ class TestCorrectEdgeFromPrior:
         dag.add_edge('X', 'Y')
         prior = [['A'], ['B']]
 
-        orientation = utils.correct_edge_from_prior(dag, 'X', 'Y', prior, verbose=False)
+        orientation = utils.correct_edge_from_prior(
+            dag, 'X', 'Y', prior, verbose=False)
 
         assert orientation == 0
         assert dag.has_edge('X', 'Y')
@@ -872,7 +921,8 @@ class TestCorrectEdgeFromPrior:
         dag.add_edge('A', 'B')
         prior = []
 
-        orientation = utils.correct_edge_from_prior(dag, 'A', 'B', prior, verbose=False)
+        orientation = utils.correct_edge_from_prior(
+            dag, 'A', 'B', prior, verbose=False)
 
         assert orientation == 0
 
@@ -881,7 +931,8 @@ class TestCorrectEdgeFromPrior:
         dag.add_edge('B', 'C')
         prior = [['A'], ['B', 'C']]
 
-        orientation = utils.correct_edge_from_prior(dag, 'B', 'C', prior, verbose=False)
+        orientation = utils.correct_edge_from_prior(
+            dag, 'B', 'C', prior, verbose=False)
 
         assert orientation == 0
 
@@ -893,7 +944,8 @@ class TestValidCandidatesFromPrior:
         effect = 'C'
         prior = [['A'], ['B', 'C'], ['D']]
 
-        candidates = utils.valid_candidates_from_prior(feature_names, effect, prior)
+        candidates = utils.valid_candidates_from_prior(
+            feature_names, effect, prior)
 
         assert candidates == ['A', 'B']
 
@@ -910,7 +962,8 @@ class TestValidCandidatesFromPrior:
         effect = 'C'
         prior = None
 
-        candidates = utils.valid_candidates_from_prior(feature_names, effect, prior)
+        candidates = utils.valid_candidates_from_prior(
+            feature_names, effect, prior)
 
         assert candidates == ['A', 'B', 'D']
 
@@ -919,7 +972,8 @@ class TestValidCandidatesFromPrior:
         effect = 'C'
         prior = []
 
-        candidates = utils.valid_candidates_from_prior(feature_names, effect, prior)
+        candidates = utils.valid_candidates_from_prior(
+            feature_names, effect, prior)
 
         assert candidates == ['A', 'B', 'D']
 
@@ -930,34 +984,36 @@ class TestBreakCyclesUsingPrior:
         dag = nx.DiGraph()
         dag.add_edges_from([('A', 'B'), ('B', 'C'), ('C', 'A')])
         prior = [['A'], ['B'], ['C']]
-        
+
         # Break cycles using prior
         new_dag = utils.break_cycles_using_prior(dag, prior)
-        
+
         # Assert that the cycle is broken
-        assert not list(nx.simple_cycles(new_dag)), "The cycle should be broken."
+        assert not list(nx.simple_cycles(new_dag)
+                        ), "The cycle should be broken."
 
     def test_break_cycles_keeps_valid_edges(self):
         # Create a graph without a cycle
         dag = nx.DiGraph()
         dag.add_edges_from([('A', 'B'), ('B', 'C')])
         prior = [['A'], ['B'], ['C']]
-        
+
         # Break cycles using prior
         new_dag = utils.break_cycles_using_prior(dag, prior)
-        
+
         # Assert that no edges are removed
-        assert list(new_dag.edges) == [('A', 'B'), ('B', 'C')], "Edges should remain unchanged."
+        assert list(new_dag.edges) == [
+            ('A', 'B'), ('B', 'C')], "Edges should remain unchanged."
 
     def test_break_cycles_with_no_prior(self):
         # Create a graph with a cycle
         dag = nx.DiGraph()
         dag.add_edges_from([('A', 'B'), ('B', 'C'), ('C', 'A')])
         prior = None
-        
+
         # Break cycles using prior
         new_dag = utils.break_cycles_using_prior(dag, prior)
-        
+
         # Assert that the cycle is broken
         assert sorted(list(nx.simple_cycles(new_dag))[0]) == ['A', 'B', 'C'], \
             "The cycle should remain."
@@ -979,15 +1035,17 @@ class TestPotentialMisorientedEdges:
             'B': {'A': MockDiscrepancy(0.2), 'C': MockDiscrepancy(0.1)},
             'C': {'A': MockDiscrepancy(0.6), 'B': MockDiscrepancy(0.9)}
         }
-        
+
         # Identify misoriented edges
-        misoriented_edges = utils.potential_misoriented_edges(loop, discrepancies)
-        
+        misoriented_edges = utils.potential_misoriented_edges(
+            loop, discrepancies)
+
         # Assert the correct misoriented edges are identified
         expected_edges = [('A', 'B', 0.1)]
         assert misoriented_edges[0][0] == expected_edges[0][0]
         assert misoriented_edges[0][1] == expected_edges[0][1]
-        assert math.isclose(misoriented_edges[0][2], expected_edges[0][2], rel_tol=1e-6)
+        assert math.isclose(
+            misoriented_edges[0][2], expected_edges[0][2], rel_tol=1e-6)
 
     def test_no_misoriented_edges(self):
         # Define a loop and discrepancies
@@ -997,10 +1055,11 @@ class TestPotentialMisorientedEdges:
             'B': {'A': MockDiscrepancy(0.3), 'C': MockDiscrepancy(0.1)},
             'C': {'A': MockDiscrepancy(0.6), 'B': MockDiscrepancy(0.9)}
         }
-        
+
         # Identify misoriented edges
-        misoriented_edges = utils.potential_misoriented_edges(loop, discrepancies)
-        
+        misoriented_edges = utils.potential_misoriented_edges(
+            loop, discrepancies)
+
         # Assert no misoriented edges are identified
         assert misoriented_edges == []
 
@@ -1012,7 +1071,8 @@ class TestBreakCyclesIfPresent:
         dag.add_edges_from([("A", "B"), ("B", "C")])
         discrepancies = {}
         result = utils.break_cycles_if_present(dag, discrepancies)
-        assert list(result.edges) == [("A", "B"), ("B", "C")], "DAG should remain unchanged"
+        assert list(result.edges) == [
+            ("A", "B"), ("B", "C")], "DAG should remain unchanged"
 
     def test_single_cycle(self):
         dag = nx.DiGraph()
@@ -1027,7 +1087,8 @@ class TestBreakCyclesIfPresent:
 
     def test_multiple_cycles(self):
         dag = nx.DiGraph()
-        dag.add_edges_from([("A", "B"), ("B", "C"), ("C", "A"), ("C", "D"), ("D", "B")])
+        dag.add_edges_from(
+            [("A", "B"), ("B", "C"), ("C", "A"), ("C", "D"), ("D", "B")])
         discrepancies = {
             "B": {"A": MockDiscrepancy(0.2), "D": MockDiscrepancy(0.5)},
             "C": {"B": MockDiscrepancy(0.1)},
@@ -1035,7 +1096,8 @@ class TestBreakCyclesIfPresent:
             "D": {"C": MockDiscrepancy(0.4)}
         }
         result = utils.break_cycles_if_present(dag, discrepancies)
-        assert not list(nx.simple_cycles(result)), "All cycles should be broken"
+        assert not list(nx.simple_cycles(result)
+                        ), "All cycles should be broken"
 
     def test_with_prior_knowledge(self):
         dag = nx.DiGraph()
@@ -1047,7 +1109,8 @@ class TestBreakCyclesIfPresent:
         }
         prior = [["A"], ["B"], ["C"]]
         result = utils.break_cycles_if_present(dag, discrepancies, prior=prior)
-        assert not list(nx.simple_cycles(result)), "Cycles should be broken using prior knowledge"
+        assert not list(nx.simple_cycles(result)
+                        ), "Cycles should be broken using prior knowledge"
 
     def test_potential_misoriented_edges(self):
         dag = nx.DiGraph()
@@ -1058,7 +1121,8 @@ class TestBreakCyclesIfPresent:
             "A": {"C": MockDiscrepancy(0.3)}
         }
         result = utils.break_cycles_if_present(dag, discrepancies)
-        assert not list(nx.simple_cycles(result)), "Cycles should be broken by changing orientation"
+        assert not list(nx.simple_cycles(result)
+                        ), "Cycles should be broken by changing orientation"
 
 
 class TestGraphToDotFile:

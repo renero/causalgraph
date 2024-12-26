@@ -74,7 +74,8 @@ class GraphDiscovery:
         self.trainer = {}
 
         # Read the reference graph
-        self.ref_graph = utils.graph_from_dot_file(true_dag_filename)
+        if true_dag_filename is not None:
+            self.ref_graph = utils.graph_from_dot_file(true_dag_filename)
 
         # assert that the data file exists
         if not os.path.exists(csv_filename):
@@ -131,11 +132,11 @@ class GraphDiscovery:
         Args:
             trainer (dict): A dictionary of Experiment objects
             estimator (str): The estimator to use ('rex' or other)
-            verbose (bool, optional): Whether to print verbose output. 
+            verbose (bool, optional): Whether to print verbose output.
                 Defaults to False.
-            hpo_iterations (int, optional): Number of HPO trials for REX. 
+            hpo_iterations (int, optional): Number of HPO trials for REX.
                 Defaults to None.
-            bootstrap_iterations (int, optional): Number of bootstrap trials 
+            bootstrap_iterations (int, optional): Number of bootstrap trials
                 for REX. Defaults to None.
         """
         if self.estimator == 'rex':
@@ -217,9 +218,9 @@ class GraphDiscovery:
         Run the experiment.
 
         Args:
-            hpo_iterations (int, optional): Number of HPO trials for REX. 
+            hpo_iterations (int, optional): Number of HPO trials for REX.
                 Defaults to None.
-            bootstrap_iterations (int, optional): Number of bootstrap trials 
+            bootstrap_iterations (int, optional): Number of bootstrap trials
                 for REX. Defaults to None.
         """
         self.create_experiments()
@@ -237,14 +238,17 @@ class GraphDiscovery:
         assert self.trainer, "No trainer to save"
         assert full_filename_path, "No output path specified"
 
-        trainer_name = os.path.splitext(
-            os.path.basename(full_filename_path))[0]
         full_dir_path = os.path.dirname(full_filename_path)
-        assert os.path.exists(full_dir_path), \
-            f"Output directory {full_dir_path} does not exist"
+        # Check only if not local dir
+        if full_dir_path != "." and full_dir_path != "":
+            assert os.path.exists(full_dir_path), \
+                f"Output directory {full_dir_path} does not exist"
+        else:
+            full_dir_path = os.getcwd()
 
         saved_as = utils.save_experiment(
-            trainer_name, full_dir_path, self.trainer, overwrite=False)
+            os.path.basename(full_filename_path), full_dir_path,
+            self.trainer, overwrite=False)
         print(f"Saved model as: {saved_as}", flush=True)
 
     def load(self, model_path: str) -> Experiment:
