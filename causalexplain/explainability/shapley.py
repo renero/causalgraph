@@ -37,7 +37,6 @@ from sklearn.base import BaseEstimator
 from sklearn.discriminant_analysis import StandardScaler
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
-from sklearn.utils.validation import check_is_fitted
 
 from ..independence.feature_selection import select_features
 from ..common import utils
@@ -458,7 +457,9 @@ class ShapEstimator(BaseEstimator):
         if self.verbose:
             print("-----\nshap.predict()")
 
-        check_is_fitted(self, 'is_fitted_')
+        if not self.is_fitted_:
+            raise ValueError("This Rex instance is not fitted yet. \
+                Call 'fit' with appropriate arguments before using this estimator.")
         self.prior = prior
 
         # Recompute mean_shap_percentile here, in case it was changed
@@ -555,7 +556,9 @@ class ShapEstimator(BaseEstimator):
         pd.DataFrame
             A dataframe containing the discrepancies for all features and all targets.
         """
-        check_is_fitted(self, 'is_fitted_')
+        if not self.is_fitted_:
+            raise ValueError("This Rex instance is not fitted yet. \
+                Call 'fit' with appropriate arguments before using this estimator.")
         self.discrepancies = pd.DataFrame(columns=self.feature_names)
         self.shap_discrepancies = defaultdict(dict)
         for target_name in self.feature_names:
@@ -611,10 +614,16 @@ class ShapEstimator(BaseEstimator):
         # The alternative hypothesis (H1): Signifies that Heteroscedasticity is present
         # If the p-value is less than the significance level (0.05), we reject the
         # null hypothesis and conclude that heteroscedasticity is present.
-        test_shap = sms.het_breuschpagan(model_s.resid, X)
+        try:
+            test_shap = sms.het_breuschpagan(model_s.resid, X)
+        except ValueError:
+            test_shap = (0, 0)
         shap_heteroskedasticity = test_shap[1] < 0.05
 
-        test_parent = sms.het_breuschpagan(model_y.resid, X)
+        try:
+            test_parent = sms.het_breuschpagan(model_y.resid, X)
+        except ValueError:
+            test_parent = (0, 0)
         parent_heteroskedasticity = test_parent[1] < 0.05
 
         corr = spearmanr(s, y)

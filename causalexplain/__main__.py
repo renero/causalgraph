@@ -114,7 +114,7 @@ def check_args_validity(args):
             "Method must be one of: rex, pc, fci, ges, lingam, cam, notears"
         run_values['estimator'] = str(args.method)
 
-    # Check that either dataset is provided or both load_model and no_train 
+    # Check that either dataset is provided or both load_model and no_train
     # are specified
     if args.dataset is None:
         if not (args.load_model and args.no_train):

@@ -76,6 +76,8 @@ class GraphDiscovery:
         # Read the reference graph
         if true_dag_filename is not None:
             self.ref_graph = utils.graph_from_dot_file(true_dag_filename)
+        else:
+            self.ref_graph = None
 
         # assert that the data file exists
         if not os.path.exists(csv_filename):
@@ -178,7 +180,7 @@ class GraphDiscovery:
             self.metrics = self.trainer[trainer_key].metrics
             return self.trainer[trainer_key]
 
-        # For ReX, we need to combine the DAGs. Hardcode for now to combine
+        # For ReX, we need to combine the DAGs. Hardcoded for now to combine
         # the first and second DAGs
         estimator1 = getattr(self.trainer[list(self.trainer.keys())[0]], 'rex')
         estimator2 = getattr(self.trainer[list(self.trainer.keys())[1]], 'rex')
@@ -196,7 +198,7 @@ class GraphDiscovery:
             output_path=self.output_path,
             verbose=False)
 
-        # Set the DAG and evaluate
+        # Set the DAG and evaluate it
         self.trainer[new_trainer].ref_graph = self.ref_graph
         self.trainer[new_trainer].dag = dag
         if self.ref_graph is not None and self.data_columns is not None:

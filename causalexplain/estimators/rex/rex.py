@@ -27,7 +27,7 @@ from mlforge.mlforge import Pipeline
 from mlforge.progbar import ProgBar
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import StandardScaler
-from sklearn.utils.validation import check_is_fitted, check_random_state
+from sklearn.utils.validation import check_random_state
 
 from ...common import (
     utils, DEFAULT_HPO_TRIALS, DEFAULT_BOOTSTRAP_TRIALS,
@@ -325,7 +325,9 @@ class Rex(BaseEstimator, ClassifierMixin):
             rex.predict(X_test, ref_graph, prior=[['A', 'B'], ['C', 'D']])
             ```
         """
-        check_is_fitted(self, "is_fitted_")
+        if not self.is_fitted_:
+            raise ValueError("This Rex instance is not fitted yet. \
+                Call 'fit' with appropriate arguments before using this estimator.")
 
         self.init_predict_time = time.time()
 
@@ -531,7 +533,9 @@ class Rex(BaseEstimator, ClassifierMixin):
         adjacency_matrix : np.ndarray
         """
         # Assert that 'shaps' exists and has been fit
-        check_is_fitted(self, "is_fitted_")
+        if not self.is_fitted_:
+            raise ValueError("This Rex instance is not fitted yet. \
+                Call 'fit' with appropriate arguments before using this estimator.")
 
         if self.verbose:
             print(
@@ -829,7 +833,7 @@ class Rex(BaseEstimator, ClassifierMixin):
             ref_graph (nx.DiGraph): The reference graph, or ground truth.
 
         Returns:
-            pd.DataFrame: A dataframe with the knowledge about each edge in 
+            pd.DataFrame: A dataframe with the knowledge about each edge in
             the reference graph and the predicted graph
         """
         if ref_graph is None:

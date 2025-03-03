@@ -25,7 +25,6 @@ import pandas as pd
 import torch
 from sklearn.base import BaseEstimator
 from sklearn.preprocessing import StandardScaler
-from sklearn.utils.validation import check_is_fitted
 from torch.utils.data import DataLoader
 from mlforge.progbar import ProgBar   # type: ignore
 
@@ -253,7 +252,9 @@ class NNRegressor(BaseEstimator):
             f"X has {X.shape[1]} features, expected {self.n_features_in_}"
 
         # X = check_array(X, accept_sparse=True)
-        check_is_fitted(self, 'is_fitted_')
+        if not self.is_fitted_:
+            raise ValueError("This Rex instance is not fitted yet. \
+                Call 'fit' with appropriate arguments before using this estimator.")
 
         if self.correlation_th is not None:
             X_original = X.copy()
@@ -310,7 +311,9 @@ class NNRegressor(BaseEstimator):
         """
         assert X.shape[1] == self.n_features_in_, \
             f"X has {X.shape[1]} features, expected {self.n_features_in_}"
-        check_is_fitted(self, 'is_fitted_')
+        if not self.is_fitted_:
+            raise ValueError("This Rex instance is not fitted yet. \
+                Call 'fit' with appropriate arguments before using this estimator.")
 
         # Call the class method to predict the values for each target variable
         y_hat = self.predict(X)
