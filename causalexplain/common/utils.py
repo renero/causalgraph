@@ -11,6 +11,7 @@ Utility functions for causalexplain
 # pylint: disable=W0106:expression-not-assigned, R1702:too-many-branches
 
 import glob
+import json
 import os
 import pickle
 import types
@@ -26,7 +27,6 @@ import pydotplus
 import torch
 
 from ..independence.edge_orientation import get_edge_orientation
-
 
 AnyGraph = Union[nx.Graph, nx.DiGraph]
 
@@ -45,7 +45,7 @@ def save_experiment(
         obj_name (str): the name to be given to the pickle file to be saved. If
             a file already exists with that name, a file with same name and a
             extension will be generated.
-        folder (str): a full path to the folder where the experiment is to 
+        folder (str): a full path to the folder where the experiment is to
             be saved. If the folder does not exist it will be created.
         results (obj): the object to be saved as experiment. This is typically a
             dictionary with different items representing different parts of the
@@ -155,13 +155,13 @@ def graph_from_dot_file(dot_file: Union[str, Path]) -> Optional[nx.DiGraph]:
         dot_string = dot_object[0].to_string()
         if not dot_string:
             return None
-            
+
         dot_string = dot_string.replace('\"\\n\"', '')
         dot_string = dot_string.replace("\n;\n", "\n")
         dotplus = pydotplus.graph_from_dot_data(dot_string)
         if dotplus is None:
             return None
-            
+
         dotplus.set_strict(True)   # type: ignore
         final_graph = nx.nx_pydot.from_pydot(dotplus)
         if '\\n' in final_graph.nodes:
@@ -215,9 +215,9 @@ def graph_from_adjacency(
         node_labels: an array of same length as nr of columns in the adjacency
             matrix containing the labels to use with every node.
         th: (float) weight threshold to be considered a valid edge.
-        inverse (bool): Set to true if rows in adjacency reflects where edges 
+        inverse (bool): Set to true if rows in adjacency reflects where edges
             are comming from, instead of where are they going to.
-        absolute_values: Take absolute value of weight label to check if 
+        absolute_values: Take absolute value of weight label to check if
             its greater than the threshold.
 
     Returns:
@@ -266,11 +266,11 @@ def graph_from_adjacency_file(
     Args:
         file: (str) the full path of the file to read
         labels: (List[str]) the list of node names to be used. If None, the
-            node names are extracted from the adj file. The names must be 
+            node names are extracted from the adj file. The names must be
             already sorted in the same order as the adjacency matrix.
         th: (float) weight threshold to be considered a valid edge.
         sep: (str) the separator used in the file
-        header: (bool) whether the file has a header. If True, then 'infer' 
+        header: (bool) whether the file has a header. If True, then 'infer'
         is used to read the header.
     Returns:
         DiGraph, DataFrame
@@ -778,9 +778,9 @@ def potential_misoriented_edges(
 
     Args:
         loop (List[str]): The list of nodes in the loop.
-        discrepancies (Dict): A dictionary containing discrepancies between 
+        discrepancies (Dict): A dictionary containing discrepancies between
             nodes. It is typically a positive float number between 0 and 1.
-        verbose (bool, optional): Whether to print verbose output. 
+        verbose (bool, optional): Whether to print verbose output.
             Defaults to False.
 
     Returns:
@@ -860,7 +860,7 @@ def break_cycles_if_present(
     cycles_info = []
     while len(cycles) > 0:
         cycle = cycles.pop(0)
-        # For every pair of consecutive nodes in the cycle, store its SHAP 
+        # For every pair of consecutive nodes in the cycle, store its SHAP
         # discrepancy
         cycle_edges = {}
         for node in cycle:
@@ -878,7 +878,7 @@ def break_cycles_if_present(
                     min_gof][0]
 
         # Check if any of the edges in the loop is potentially misoriented.
-        # If so, change the orientation of the edge with the lowest SHAP 
+        # If so, change the orientation of the edge with the lowest SHAP
         # discrepancy
         potential_misoriented = potential_misoriented_edges(
             cycle, discrepancies, verbose)
@@ -887,7 +887,7 @@ def break_cycles_if_present(
                 print("Potential misoriented edges in the cycle:")
                 for edge in potential_misoriented:
                     print(f"  {edge[0]} --> {edge[1]} ({edge[2]:.3f})")
-            # Check if changing the orientation of the edge would break 
+            # Check if changing the orientation of the edge would break
             # the cycle
             test_dag = new_dag.copy()
 
@@ -1015,11 +1015,11 @@ def _classify_variable(arr):
         unique_values = np.unique(arr)
     else:
         unique_values = arr.unique()
-    
+
     # Handle empty series
     if len(unique_values) == 0:
         return "continuous"
-        
+
     # Check if the variable is not a number
     if unique_values.dtype.kind not in "biufc":
         return "multiclass"
@@ -1242,9 +1242,9 @@ def combine_dags(
 
     # Remove cycles from the union and intersection
     union_cycles_removed = break_cycles_if_present(
-        union, discrepancies, prior) 
+        union, discrepancies, prior)
     inter_cycles_removed = break_cycles_if_present(
-        inter, discrepancies, prior) 
+        inter, discrepancies, prior)
 
     return union, inter, union_cycles_removed, inter_cycles_removed
 
@@ -1269,3 +1269,20 @@ def list_files(input_pattern: str, where: str) -> list:
         f"No files found in {where} matching <{input_pattern}>"
 
     return sorted(list(set(input_files)))
+
+def read_json_file(file_path: str):
+    """
+    Read a JSON file and return its content as a dictionary."
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            data = json.load(file)
+            # Get 'prior' key, default to empty list
+            prior = data.get("prior", [])
+            return prior
+    except FileNotFoundError:
+        print(f"Error: File '{file_path}' not found.")
+        return []
+    except json.JSONDecodeError:
+        print("Error: Invalid JSON format.")
+        return []

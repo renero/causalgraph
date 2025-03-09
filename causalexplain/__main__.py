@@ -74,6 +74,9 @@ def parse_args():
         '-r', '--regressor', type=str, required=False, action=SplitArgs,
         help='Regressor list')
     parser.add_argument(
+        '-p', '--prior', type=str, required=False,
+        help='Prior file (JSON format) to use in the model')
+    parser.add_argument(
         '-S', '--seed', type=int, required=False, help='Random seed')
     parser.add_argument(
         '-s', '--save_model', type=str, required=False, nargs='?', const='',
@@ -154,6 +157,14 @@ def check_args_validity(args):
         run_values['no_train'] = True
     else:
         run_values['no_train'] = False
+
+    # Load prior, if specified
+    run_values['prior'] = None
+    if args.prior is not None:
+        assert '.json' in args.prior, "Prior file must be in JSON format"
+        assert os.path.isfile(args.prior), "Prior file does not exist"
+        # Load the JSON file int a List of List of str in run_values['prior']
+        run_values['prior'] = utils.read_json_file(args.prior)
 
     # Determine where to save the model pickle.
     if args.save_model == '':
@@ -247,7 +258,8 @@ def main():
     if not run_values['no_train']:
         discoverer.fit_experiments(
             run_values['hpo_iterations'],
-            run_values['bootstrap_iterations']
+            run_values['bootstrap_iterations'],
+            run_values['prior']
         )
         result = discoverer.combine_and_evaluate_dags()
 

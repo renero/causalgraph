@@ -6,7 +6,7 @@ import os
 import pickle
 import pandas as pd
 import matplotlib.pyplot as plt
-from typing import Tuple
+from typing import List, Tuple
 
 from causalexplain.common import (
     DEFAULT_REGRESSORS,
@@ -126,6 +126,7 @@ class GraphDiscovery:
         self,
         hpo_iterations: int = None,
         bootstrap_iterations: int = None,
+        prior: List[List[str]] = None,
         **kwargs
     ) -> None:
         """
@@ -145,7 +146,8 @@ class GraphDiscovery:
             xargs = {
                 'verbose': self.verbose,
                 'hpo_n_trials': hpo_iterations,
-                'bootstrap_trials': bootstrap_iterations
+                'bootstrap_trials': bootstrap_iterations,
+                'prior': prior
             }
         else:
             xargs = {
@@ -215,6 +217,7 @@ class GraphDiscovery:
             self,
             hpo_iterations: int = None,
             bootstrap_iterations: int = None,
+            prior: List[List[str]] = None,
             **kwargs):
         """
         Run the experiment.
@@ -226,7 +229,7 @@ class GraphDiscovery:
                 for REX. Defaults to None.
         """
         self.create_experiments()
-        self.fit_experiments(hpo_iterations, bootstrap_iterations, **kwargs)
+        self.fit_experiments(hpo_iterations, bootstrap_iterations, prior, **kwargs)
         self.combine_and_evaluate_dags()
 
     def save(self, full_filename_path: str) -> None:

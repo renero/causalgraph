@@ -66,15 +66,15 @@ class BaseExperiment:
     Args:
     input_path (str): The path to the input data.
     output_path (str): The path to save the experiment output.
-    train_anyway (bool, optional): Whether to train the model even if the 
+    train_anyway (bool, optional): Whether to train the model even if the
         experiment exists. Defaults to False.
-    save_anyway (bool, optional): Whether to save the experiment even 
+    save_anyway (bool, optional): Whether to save the experiment even
         if it exists. Defaults to False.
-    train_size (float, optional): The proportion of data to use for training. 
+    train_size (float, optional): The proportion of data to use for training.
         Defaults to 0.9.
-    random_state (int, optional): The random state for reproducibility. 
+    random_state (int, optional): The random state for reproducibility.
         Defaults to 42.
-    verbose (bool, optional): Whether to display verbose output. 
+    verbose (bool, optional): Whether to display verbose output.
         Defaults to False.
     """
 
@@ -162,7 +162,7 @@ class BaseExperiment:
             print(f"Estimator '{estimator_name}' not found.")
             return None
 
-        # Special case: when estimator is ReX, model_type needs also to be 
+        # Special case: when estimator is ReX, model_type needs also to be
         # passed to the constructor
         if estimator_name == 'rex':
             kwargs['model_type'] = self.model_type
@@ -302,10 +302,14 @@ class Experiment(BaseExperiment):
         """
         start_time = time.time()
         self.estimator_name = estimator
+
+        # Extract from the kwargs the parameter 'prior'
+        prior = kwargs.pop('prior') if 'prior' in kwargs else None
+
         estimator_object = self.create_estimator(
             estimator, name=self.experiment_name, **kwargs)
         estimator_object.fit_predict(
-            self.train_data, self.test_data, self.ref_graph)
+            self.train_data, self.test_data, self.ref_graph, prior=prior)
         setattr(self, estimator, estimator_object)
         end_time = time.time()
         self.fit_predict_time = end_time - start_time
