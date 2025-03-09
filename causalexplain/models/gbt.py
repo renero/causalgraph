@@ -390,7 +390,7 @@ class GBTRegressor(GradientBoostingRegressor):
 
                 return np.median(loss)
 
-        # Callback function to stop the stud if the loss is below a given threshold
+        # Callback function to stop the study if the loss is below a given threshold
         def callback(study: optuna.study.Study, trial: optuna.trial.FrozenTrial):
             if trial.value < min_loss or study.best_value < min_loss:
                 study.stop()

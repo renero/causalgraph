@@ -16,19 +16,15 @@
 
 import argparse
 import os
-import pandas as pd
+import time
 
-from causalexplain.common import (
-    DEFAULT_BOOTSTRAP_TOLERANCE,
-    DEFAULT_BOOTSTRAP_TRIALS,
-    DEFAULT_HPO_TRIALS,
-    DEFAULT_REGRESSORS,
-    DEFAULT_SEED,
-    HEADER_ASCII,
-    SUPPORTED_METHODS,
-    utils,
-)
+import pandas as pd
 from causalexplainer import GraphDiscovery
+
+from causalexplain.common import (DEFAULT_BOOTSTRAP_TOLERANCE,
+                                  DEFAULT_BOOTSTRAP_TRIALS, DEFAULT_HPO_TRIALS,
+                                  DEFAULT_REGRESSORS, DEFAULT_SEED,
+                                  HEADER_ASCII, SUPPORTED_METHODS, utils)
 
 
 def parse_args():
@@ -227,6 +223,7 @@ def main():
     header_()
     args = parse_args()
     run_values = check_args_validity(args)
+    start_time = time.time()
 
     # Create a new instance of GraphDiscovery
     discoverer = GraphDiscovery(
@@ -254,6 +251,8 @@ def main():
         )
         result = discoverer.combine_and_evaluate_dags()
 
+    elapsed_time, units = utils.format_time(time.time() - start_time)
+    print(f"Elapsed time: {elapsed_time:.1f} {units}")
     discoverer.printout_results(result.dag, result.metrics)
     if run_values['output_path'] is not None:
         discoverer.save(run_values['model_filename'])

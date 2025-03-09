@@ -117,7 +117,7 @@ experiment = GraphDiscovery(
    experiment_name='my_experiment',
    model_type='rex',
    csv_filename='data.csv',
-   dot_filename='true_graph.dot')
+   true_dag_filename='true_graph.dot')
 
 # Run the experiments
 experiment.run()
