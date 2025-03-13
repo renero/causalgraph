@@ -42,9 +42,11 @@ class GraphDiscovery:
             seed (int, optional): The random seed for reproducibility.
         """
         # Normalize empty/whitespace strings to None
-        experiment_name = experiment_name.strip() if isinstance(experiment_name, str) else experiment_name
+        experiment_name = experiment_name.strip() if isinstance(
+            experiment_name, str) else experiment_name
         experiment_name = None if experiment_name == "" else experiment_name
-        csv_filename = csv_filename.strip() if isinstance(csv_filename, str) else csv_filename
+        csv_filename = csv_filename.strip() if isinstance(
+            csv_filename, str) else csv_filename
         csv_filename = None if csv_filename == "" else csv_filename
 
         if (experiment_name is None and csv_filename is not None) or \
@@ -147,7 +149,7 @@ class GraphDiscovery:
                 'verbose': self.verbose,
                 'hpo_n_trials': hpo_iterations,
                 'bootstrap_trials': bootstrap_iterations,
-                'prior': prior
+                # 'prior': prior
             }
         else:
             xargs = {
@@ -161,9 +163,13 @@ class GraphDiscovery:
             if not trainer_name.endswith("_rex"):
                 experiment.fit_predict(estimator=self.estimator, **xargs)
 
-    def combine_and_evaluate_dags(self) -> Experiment:
+    def combine_and_evaluate_dags(self, prior: List[List[str]] = None) -> Experiment:
         """
         Retrieve the DAG from the Experiment objects.
+
+        Args:
+            prior (List[List[str]], optional): The prior to use for ReX.
+                Defaults to None.
 
         Returns:
             Experiment: The experiment object with the final DAG
@@ -186,8 +192,11 @@ class GraphDiscovery:
         # the first and second DAGs
         estimator1 = getattr(self.trainer[list(self.trainer.keys())[0]], 'rex')
         estimator2 = getattr(self.trainer[list(self.trainer.keys())[1]], 'rex')
-        _, _, dag, _ = utils.combine_dags(estimator1.dag, estimator2.dag,
-                                          estimator1.shaps.shap_discrepancies)
+        _, _, dag, _ = utils.combine_dags(
+            estimator1.dag, estimator2.dag,
+            discrepancies=estimator1.shaps.shap_discrepancies,
+            prior=prior
+        )
 
         # Create a new Experiment object for the combined DAG
         new_trainer = f"{self.dataset_name}_rex"
@@ -229,8 +238,9 @@ class GraphDiscovery:
                 for REX. Defaults to None.
         """
         self.create_experiments()
-        self.fit_experiments(hpo_iterations, bootstrap_iterations, prior, **kwargs)
-        self.combine_and_evaluate_dags()
+        self.fit_experiments(
+            hpo_iterations, bootstrap_iterations, prior, **kwargs)
+        self.combine_and_evaluate_dags(prior=prior)
 
     def save(self, full_filename_path: str) -> None:
         """
@@ -315,6 +325,7 @@ class GraphDiscovery:
         if metrics is not None:
             print("\nGraph Metrics:\n-------------")
             print(metrics)
+
 
     def export(self, output_file: str) -> str:
         """

@@ -308,8 +308,14 @@ class Experiment(BaseExperiment):
 
         estimator_object = self.create_estimator(
             estimator, name=self.experiment_name, **kwargs)
-        estimator_object.fit_predict(
-            self.train_data, self.test_data, self.ref_graph, prior=prior)
+        fit_predict_args = [self.train_data, self.test_data, self.ref_graph]
+        if estimator == 'rex':
+            fit_predict_args.append(prior)
+        if estimator_object is not None:
+            estimator_object.fit_predict(*fit_predict_args)
+        else:
+            raise ValueError(f"Estimator '{estimator}' not found.")
+
         setattr(self, estimator, estimator_object)
         end_time = time.time()
         self.fit_predict_time = end_time - start_time

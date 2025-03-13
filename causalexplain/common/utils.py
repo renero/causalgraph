@@ -1246,6 +1246,12 @@ def combine_dags(
     inter_cycles_removed = break_cycles_if_present(
         inter, discrepancies, prior)
 
+    # XXX: Experiment -> Use prior to correct edges in the union
+    if prior:
+        edges_list = list(union_cycles_removed.edges)
+        for u, v in edges_list:
+            correct_edge_from_prior(union_cycles_removed, u, v, prior, verbose=False)
+
     return union, inter, union_cycles_removed, inter_cycles_removed
 
 

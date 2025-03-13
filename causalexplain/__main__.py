@@ -261,11 +261,12 @@ def main():
             run_values['bootstrap_iterations'],
             run_values['prior']
         )
-        result = discoverer.combine_and_evaluate_dags()
+        result = discoverer.combine_and_evaluate_dags(run_values['prior'])
 
     elapsed_time, units = utils.format_time(time.time() - start_time)
     print(f"Elapsed time: {elapsed_time:.1f} {units}")
     discoverer.printout_results(result.dag, result.metrics)
+
     if run_values['output_path'] is not None:
         discoverer.save(run_values['model_filename'])
 
