@@ -626,7 +626,7 @@ def hierarchies(hierarchies, threshold=0.5, **kwargs):
         - threshold (float)
             Threshold for the correlation.
         - **kwargs
-            Additional keyword arguments to be passed to the correlation_matrix 
+            Additional keyword arguments to be passed to the correlation_matrix
                 function.
 
     Returns
@@ -658,6 +658,7 @@ def dag(
         figsize: Tuple[int, int] = (5, 5),
         dpi: int = 75,
         save_to_pdf: str = None,
+        layout: str = "dot",
         **kwargs):
     """
     Compare two graphs using dot.
@@ -668,7 +669,7 @@ def dag(
     reference: The reference DAG.
     root_causes: The root causes of the graph.
     show_metrics: Whether to show the metrics of the graph.
-    show_node_fill: Whether to show the node fill (corresponding to the 
+    show_node_fill: Whether to show the node fill (corresponding to the
         root causes).
     title: The title of the graph.
     ax: The axis in which to draw the graph.
@@ -720,6 +721,7 @@ def dag(
         axis = ax["A"]
         text_axis = ax["B"]
     elif ax is not None and show_metrics is False:
+        f = None
         axis = ax
     else:
         raise ValueError(
@@ -727,19 +729,51 @@ def dag(
     if save_to_pdf is not None:
         with PdfPages(save_to_pdf) as pdf:
             if reference:
-                ref_layout = nx.drawing.nx_agraph.graphviz_layout(
-                    Gt, prog="dot")
+                # Added for circular layout compatibility
+                Gt = cleanup_graph(reference.copy())
+                if layout == "dot":
+                    ref_layout = nx.drawing.nx_agraph.graphviz_layout(
+                        Gt, prog="dot")
+                elif layout == "circular":
+                    ref_layout = nx.circular_layout(Gt)  # NEW: Circular layout
+                else:
+                    raise ValueError(
+                        "Invalid layout option. Choose 'dot' or 'circular'.")
+            else:
+                if layout == "dot":
+                    ref_layout = nx.drawing.nx_agraph.graphviz_layout(
+                        G, prog="dot")
+                elif layout == "circular":
+                    ref_layout = nx.circular_layout(G)  # NEW: Circular layout
+                else:
+                    raise ValueError(
+                        "Invalid layout option. Choose 'dot' or 'circular'.")
+
             draw_graph_subplot(
                 G, layout=ref_layout, title=title, ax=axis, **formatting_kwargs)
             pdf.savefig(f, bbox_inches='tight', pad_inches=0)
             plt.close()
     else:
         if reference:
-            ref_layout = nx.drawing.nx_agraph.graphviz_layout(
-                Gt, prog="dot")
+            # added to avoid errors with circular layout
+            Gt = cleanup_graph(reference.copy())
+            if layout == "dot":
+                ref_layout = nx.drawing.nx_agraph.graphviz_layout(
+                    Gt, prog="dot")
+            elif layout == "circular":
+                ref_layout = nx.circular_layout(Gt)  # NEW: Circular layout
+            else:
+                raise ValueError(
+                    "Invalid layout option. Choose 'dot' or 'circular'.")
         else:
-            ref_layout = nx.drawing.nx_agraph.graphviz_layout(
-                G, prog="dot")
+            if layout == "dot":
+                ref_layout = nx.drawing.nx_agraph.graphviz_layout(
+                    G, prog="dot")
+            elif layout == "circular":
+                ref_layout = nx.circular_layout(G)  # NEW: Circular layout
+            else:
+                raise ValueError(
+                    "Invalid layout option. Choose 'dot' or 'circular'.")
 
         draw_graph_subplot(
             G, root_causes=root_causes, layout=ref_layout, ax=axis, title=title,

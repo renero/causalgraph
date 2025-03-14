@@ -357,6 +357,7 @@ class GraphDiscovery:
         figsize: Tuple[int, int] = (5, 5),
         dpi: int = 75,
         save_to_pdf: str = None,
+        layout: str = 'dot',
         **kwargs
     ):
         """
@@ -364,8 +365,23 @@ class GraphDiscovery:
 
         Parameters:
         -----------
-        dag : nx.DiGraph
-            The DAG to be plotted.
+        show_metrics : bool, optional
+            Whether to show the metrics on the plot. Defaults to False.
+        show_node_fill : bool, optional
+            Whether to fill the nodes with color. Defaults to True.
+        title : str, optional
+            The title of the plot. Defaults to None.
+        ax : plt.Axes, optional
+            The matplotlib axes to plot on. Defaults to None.
+        figsize : Tuple[int, int], optional
+            The size of the plot. Defaults to (5, 5).
+        dpi : int, optional
+            The DPI of the plot. Defaults to 75.
+        save_to_pdf : str, optional
+            The path to save the plot as a PDF. Defaults to None.
+        layout : str, optional
+            The layout to use for the plot. Defaults to 'dot'. Other option
+            is 'circular'.
         """
         model = self.trainer[list(self.trainer.keys())[-1]]
         if model.ref_graph is not None:
@@ -375,4 +391,5 @@ class GraphDiscovery:
         plot.dag(
             graph=model.dag, reference=ref_graph, show_metrics=show_metrics,
             show_node_fill=show_node_fill, title=title, ax=ax,
-            figsize=figsize, dpi=dpi, save_to_pdf=save_to_pdf, **kwargs)
+            figsize=figsize, dpi=dpi, save_to_pdf=save_to_pdf, layout=layout,
+            **kwargs)
