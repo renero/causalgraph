@@ -393,3 +393,7 @@ class GraphDiscovery:
             show_node_fill=show_node_fill, title=title, ax=ax,
             figsize=figsize, dpi=dpi, save_to_pdf=save_to_pdf, layout=layout,
             **kwargs)
+
+    @property
+    def model(self):
+        return self.trainer[list(self.trainer.keys())[-1]]
