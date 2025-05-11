@@ -11,8 +11,12 @@ docs/auto_examples/
 docs/modules/generated/
 docs/datasets/generated/
 
-# Distribution / packaging
+# Logs from Optuna
+*/tb_logs/*
+tb_logs/*
+launch.json
 
+# Distribution / packaging
 .Python
 env/
 build/
@@ -48,7 +52,7 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
-*,cover
+*.cover
 .hypothesis/
 
 # Translations
@@ -65,7 +69,6 @@ doc/generated/
 # PyBuilder
 target/
 .DS_Store
-tb_logs/*
 
 examples/tb_logs/*
 db.sqlite3
@@ -84,3 +87,4 @@ requirements.txt_with_versions
 ### VisualStudioCode Patch ###
 # Ignore all local history of files
 **/.history
+.vscode/launch.json

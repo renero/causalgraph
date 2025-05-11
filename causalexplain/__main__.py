@@ -16,19 +16,15 @@
 
 import argparse
 import os
-import pandas as pd
+import time
 
-from causalexplain.common import (
-    DEFAULT_BOOTSTRAP_TOLERANCE,
-    DEFAULT_BOOTSTRAP_TRIALS,
-    DEFAULT_HPO_TRIALS,
-    DEFAULT_REGRESSORS,
-    DEFAULT_SEED,
-    HEADER_ASCII,
-    SUPPORTED_METHODS,
-    utils,
-)
+import pandas as pd
 from causalexplainer import GraphDiscovery
+
+from causalexplain.common import (DEFAULT_BOOTSTRAP_TOLERANCE,
+                                  DEFAULT_BOOTSTRAP_TRIALS, DEFAULT_HPO_TRIALS,
+                                  DEFAULT_REGRESSORS, DEFAULT_SEED,
+                                  HEADER_ASCII, SUPPORTED_METHODS, utils)
 
 
 def parse_args():
@@ -78,6 +74,9 @@ def parse_args():
         '-r', '--regressor', type=str, required=False, action=SplitArgs,
         help='Regressor list')
     parser.add_argument(
+        '-p', '--prior', type=str, required=False,
+        help='Prior file (JSON format) to use in the model')
+    parser.add_argument(
         '-S', '--seed', type=int, required=False, help='Random seed')
     parser.add_argument(
         '-s', '--save_model', type=str, required=False, nargs='?', const='',
@@ -114,7 +113,7 @@ def check_args_validity(args):
             "Method must be one of: rex, pc, fci, ges, lingam, cam, notears"
         run_values['estimator'] = str(args.method)
 
-    # Check that either dataset is provided or both load_model and no_train 
+    # Check that either dataset is provided or both load_model and no_train
     # are specified
     if args.dataset is None:
         if not (args.load_model and args.no_train):
@@ -158,6 +157,14 @@ def check_args_validity(args):
         run_values['no_train'] = True
     else:
         run_values['no_train'] = False
+
+    # Load prior, if specified
+    run_values['prior'] = None
+    if args.prior is not None:
+        assert '.json' in args.prior, "Prior file must be in JSON format"
+        assert os.path.isfile(args.prior), "Prior file does not exist"
+        # Load the JSON file int a List of List of str in run_values['prior']
+        run_values['prior'] = utils.read_json_file(args.prior)
 
     # Determine where to save the model pickle.
     if args.save_model == '':
@@ -227,6 +234,7 @@ def main():
     header_()
     args = parse_args()
     run_values = check_args_validity(args)
+    start_time = time.time()
 
     # Create a new instance of GraphDiscovery
     discoverer = GraphDiscovery(
@@ -250,11 +258,15 @@ def main():
     if not run_values['no_train']:
         discoverer.fit_experiments(
             run_values['hpo_iterations'],
-            run_values['bootstrap_iterations']
+            run_values['bootstrap_iterations'],
+            run_values['prior']
         )
-        result = discoverer.combine_and_evaluate_dags()
+        result = discoverer.combine_and_evaluate_dags(run_values['prior'])
 
+    elapsed_time, units = utils.format_time(time.time() - start_time)
+    print(f"Elapsed time: {elapsed_time:.1f} {units}")
     discoverer.printout_results(result.dag, result.metrics)
+
     if run_values['output_path'] is not None:
         discoverer.save(run_values['model_filename'])
 

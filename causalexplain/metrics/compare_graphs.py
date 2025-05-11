@@ -19,7 +19,7 @@
     >>> predicted.add_weighted_edges_from([\
         ('A', 'B', random()), ('A', 'C', random()), ('E', 'A', random()),\
         ('E', 'B', random()), ('C', 'D', random())])
-        
+
     >>> result = evaluate_graph(target, predicted)
 """
 
@@ -125,7 +125,7 @@ class Metrics:
 
     def matplotlib_repr(self):
         """
-        Generates a formatted string representation of the metrics for display 
+        Generates a formatted string representation of the metrics for display
         in a matplotlib plot.
 
         Returns:
@@ -185,7 +185,7 @@ def evaluate_graph(
     """
         This method computes metrics between a pair of graphs: the ground truth and
         the predicted graph. To call this method, simply pass the reference graph, and
-        the predicted graph (the one you want to make as much similar to the first one 
+        the predicted graph (the one you want to make as much similar to the first one
         as possible), and all metrics will be computed.
 
         Parameters
@@ -200,7 +200,7 @@ def evaluate_graph(
             The threshold to use for the precision-recall curve, by default 0.0
         absolute : bool, optional
             Whether to use the absolute value of the weights, by default False
-        double_for_anticausal : bool, optional  
+        double_for_anticausal : bool, optional
             Whether to double the weights of anticausal edges, by default True
 
         Returns
@@ -303,14 +303,14 @@ def _binary_adj_matrix(
 ) -> np.ndarray:
     """
     Returns a binary adjacency matrix from a weighted adjacency matrix. If the
-    values in the adjacency matrix are greater than the threshold (default 0.0) 
+    values in the adjacency matrix are greater than the threshold (default 0.0)
     then that value is transformed into 1.0.
 
     Arguments:
         - G (Graph or DiGraph): Graph or Digraph
         - threshold (float): Min value of weight to be valued as 1 in the binary
             matrix.
-        - absolute (bool): Whether performing the comparison of weights against 
+        - absolute (bool): Whether performing the comparison of weights against
             the threshold using absolute value. Default is false.
 
     Returns:
@@ -331,9 +331,9 @@ def _binary_adj_matrix(
 
 
 def _adjacency(
-        G: AnyGraph, 
-        order: Optional[List] = None, 
-        threshold=0.0, 
+        G: AnyGraph,
+        order: Optional[List] = None,
+        threshold=0.0,
         absolute=False) -> np.ndarray:
     """
     Retrieves the adjacency matrix from the graph using NetworkX method if the
@@ -374,9 +374,9 @@ def _adjacency(
 
 
 def _weighted_adjacency(
-        G: AnyGraph, 
-        order: Optional[List] = None, 
-        threshold=0.0, 
+        G: AnyGraph,
+        order: Optional[List] = None,
+        threshold=0.0,
         absolute=False) -> np.ndarray:
     """
     Retrieves the adjacency matrix from the graph using NetworkX method if the
@@ -409,10 +409,16 @@ def _weighted_adjacency(
             w = 1
         else:
             w = value(F.get_edge_data(u, v)['weight'])
-        if w >= threshold:
-            adj_matrix[order.index(u), order.index(v)] = w
+        if w is not None:
+            if w >= threshold:
+                adj_matrix[order.index(u), order.index(v)] = w
+                if not G.is_directed():
+                    adj_matrix[order.index(v), order.index(u)] = w
+        else:
+            adj_matrix[order.index(u), order.index(v)] = 0
             if not G.is_directed():
-                adj_matrix[order.index(v), order.index(u)] = w
+                adj_matrix[order.index(v), order.index(u)] = 0
+
 
     return adj_matrix
 

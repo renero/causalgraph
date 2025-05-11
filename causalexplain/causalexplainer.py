@@ -6,7 +6,7 @@ import os
 import pickle
 import pandas as pd
 import matplotlib.pyplot as plt
-from typing import Tuple
+from typing import List, Tuple
 
 from causalexplain.common import (
     DEFAULT_REGRESSORS,
@@ -42,9 +42,11 @@ class GraphDiscovery:
             seed (int, optional): The random seed for reproducibility.
         """
         # Normalize empty/whitespace strings to None
-        experiment_name = experiment_name.strip() if isinstance(experiment_name, str) else experiment_name
+        experiment_name = experiment_name.strip() if isinstance(
+            experiment_name, str) else experiment_name
         experiment_name = None if experiment_name == "" else experiment_name
-        csv_filename = csv_filename.strip() if isinstance(csv_filename, str) else csv_filename
+        csv_filename = csv_filename.strip() if isinstance(
+            csv_filename, str) else csv_filename
         csv_filename = None if csv_filename == "" else csv_filename
 
         if (experiment_name is None and csv_filename is not None) or \
@@ -76,6 +78,8 @@ class GraphDiscovery:
         # Read the reference graph
         if true_dag_filename is not None:
             self.ref_graph = utils.graph_from_dot_file(true_dag_filename)
+        else:
+            self.ref_graph = None
 
         # assert that the data file exists
         if not os.path.exists(csv_filename):
@@ -124,6 +128,7 @@ class GraphDiscovery:
         self,
         hpo_iterations: int = None,
         bootstrap_iterations: int = None,
+        prior: List[List[str]] = None,
         **kwargs
     ) -> None:
         """
@@ -143,7 +148,8 @@ class GraphDiscovery:
             xargs = {
                 'verbose': self.verbose,
                 'hpo_n_trials': hpo_iterations,
-                'bootstrap_trials': bootstrap_iterations
+                'bootstrap_trials': bootstrap_iterations,
+                # 'prior': prior
             }
         else:
             xargs = {
@@ -157,9 +163,13 @@ class GraphDiscovery:
             if not trainer_name.endswith("_rex"):
                 experiment.fit_predict(estimator=self.estimator, **xargs)
 
-    def combine_and_evaluate_dags(self) -> Experiment:
+    def combine_and_evaluate_dags(self, prior: List[List[str]] = None) -> Experiment:
         """
         Retrieve the DAG from the Experiment objects.
+
+        Args:
+            prior (List[List[str]], optional): The prior to use for ReX.
+                Defaults to None.
 
         Returns:
             Experiment: The experiment object with the final DAG
@@ -178,12 +188,15 @@ class GraphDiscovery:
             self.metrics = self.trainer[trainer_key].metrics
             return self.trainer[trainer_key]
 
-        # For ReX, we need to combine the DAGs. Hardcode for now to combine
+        # For ReX, we need to combine the DAGs. Hardcoded for now to combine
         # the first and second DAGs
         estimator1 = getattr(self.trainer[list(self.trainer.keys())[0]], 'rex')
         estimator2 = getattr(self.trainer[list(self.trainer.keys())[1]], 'rex')
-        _, _, dag, _ = utils.combine_dags(estimator1.dag, estimator2.dag,
-                                          estimator1.shaps.shap_discrepancies)
+        _, _, dag, _ = utils.combine_dags(
+            estimator1.dag, estimator2.dag,
+            discrepancies=estimator1.shaps.shap_discrepancies,
+            prior=prior
+        )
 
         # Create a new Experiment object for the combined DAG
         new_trainer = f"{self.dataset_name}_rex"
@@ -196,7 +209,7 @@ class GraphDiscovery:
             output_path=self.output_path,
             verbose=False)
 
-        # Set the DAG and evaluate
+        # Set the DAG and evaluate it
         self.trainer[new_trainer].ref_graph = self.ref_graph
         self.trainer[new_trainer].dag = dag
         if self.ref_graph is not None and self.data_columns is not None:
@@ -213,6 +226,7 @@ class GraphDiscovery:
             self,
             hpo_iterations: int = None,
             bootstrap_iterations: int = None,
+            prior: List[List[str]] = None,
             **kwargs):
         """
         Run the experiment.
@@ -224,8 +238,9 @@ class GraphDiscovery:
                 for REX. Defaults to None.
         """
         self.create_experiments()
-        self.fit_experiments(hpo_iterations, bootstrap_iterations, **kwargs)
-        self.combine_and_evaluate_dags()
+        self.fit_experiments(
+            hpo_iterations, bootstrap_iterations, prior, **kwargs)
+        self.combine_and_evaluate_dags(prior=prior)
 
     def save(self, full_filename_path: str) -> None:
         """
@@ -311,6 +326,7 @@ class GraphDiscovery:
             print("\nGraph Metrics:\n-------------")
             print(metrics)
 
+
     def export(self, output_file: str) -> str:
         """
         This method exports the DAG to a DOT file.
@@ -341,6 +357,7 @@ class GraphDiscovery:
         figsize: Tuple[int, int] = (5, 5),
         dpi: int = 75,
         save_to_pdf: str = None,
+        layout: str = 'dot',
         **kwargs
     ):
         """
@@ -348,8 +365,23 @@ class GraphDiscovery:
 
         Parameters:
         -----------
-        dag : nx.DiGraph
-            The DAG to be plotted.
+        show_metrics : bool, optional
+            Whether to show the metrics on the plot. Defaults to False.
+        show_node_fill : bool, optional
+            Whether to fill the nodes with color. Defaults to True.
+        title : str, optional
+            The title of the plot. Defaults to None.
+        ax : plt.Axes, optional
+            The matplotlib axes to plot on. Defaults to None.
+        figsize : Tuple[int, int], optional
+            The size of the plot. Defaults to (5, 5).
+        dpi : int, optional
+            The DPI of the plot. Defaults to 75.
+        save_to_pdf : str, optional
+            The path to save the plot as a PDF. Defaults to None.
+        layout : str, optional
+            The layout to use for the plot. Defaults to 'dot'. Other option
+            is 'circular'.
         """
         model = self.trainer[list(self.trainer.keys())[-1]]
         if model.ref_graph is not None:
@@ -359,4 +391,9 @@ class GraphDiscovery:
         plot.dag(
             graph=model.dag, reference=ref_graph, show_metrics=show_metrics,
             show_node_fill=show_node_fill, title=title, ax=ax,
-            figsize=figsize, dpi=dpi, save_to_pdf=save_to_pdf, **kwargs)
+            figsize=figsize, dpi=dpi, save_to_pdf=save_to_pdf, layout=layout,
+            **kwargs)
+
+    @property
+    def model(self):
+        return self.trainer[list(self.trainer.keys())[-1]]

@@ -1,3 +1,8 @@
+version 0.5.5
+-------------
+- This is the version used in the paper: https://arxiv.org/abs/2501.12706
+- Fixed behavior for all estimators.
+
 version 0.4.4
 -------------
 - Iterative method added to Rex pipeline. Now it is possible to use the
