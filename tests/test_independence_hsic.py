@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from ..independence.hsic import HSIC
+from causalexplain.independence.hsic import HSIC
 from hyppo.independence import Hsic
 
 

@@ -1,7 +1,7 @@
 import numpy as np
 import networkx as nx
 import pytest
-from ..metrics.compare_graphs import (
+from causalexplain.metrics.compare_graphs import (
     Metrics, _adjacency, _aupr, _binary_adj_matrix, _conf_mat,
     _conf_mat_directed, _conf_mat_undirected, _confusion_matrix, _f1,
     _is_weighted, _intersect_matrices, _negative, _positive, _precision,

@@ -2,7 +2,12 @@ import numpy as np
 import pytest
 from typing import Dict
 import networkx as nx
-from gadjid import sid
+
+try:
+    from gadjid import sid
+except ImportError:  # pragma: no cover - optional dependency
+    sid = None
+    pytestmark = pytest.mark.skip(reason="gadjid package required for legacy SID tests")
 
 from causalexplain.metrics.SID import SID
 
