@@ -1,3 +1,4 @@
+from causalexplain.common import DEFAULT_REGRESSORS
 import argparse
 import json
 import os
@@ -16,7 +17,6 @@ sys.modules.setdefault("causalexplainer", gd_module)
 
 from causalexplain import __main__ as main_mod  # noqa: E402
 from causalexplain.causalexplainer import GraphDiscovery  # noqa: E402
-from causalexplain.common import DEFAULT_REGRESSORS
 
 
 @pytest.fixture
@@ -85,7 +85,8 @@ def test_check_args_with_dataset_and_save_defaults(
     assert run_values['dataset_filepath'] == sample_csv
     assert run_values['regressors'] == DEFAULT_REGRESSORS
     assert run_values['seed'] == 7
-    assert run_values['save_model'] == os.path.basename(sample_csv).replace('.csv', '') + "_rex.pickle"
+    assert run_values['save_model'] == os.path.basename(
+        sample_csv).replace('.csv', '') + "_rex.pickle"
     assert run_values['output_path'] == os.getcwd()
     assert run_values['bootstrap_iterations'] == main_mod.DEFAULT_BOOTSTRAP_TRIALS
 
@@ -101,7 +102,8 @@ def test_check_args_load_model_without_dataset(tmp_path, args_factory, monkeypat
 
 
 def test_check_args_fails_when_load_model_missing(tmp_path, args_factory):
-    args = args_factory(load_model=str(tmp_path / "missing.pkl"), no_train=True)
+    args = args_factory(load_model=str(
+        tmp_path / "missing.pkl"), no_train=True)
     with pytest.raises(FileNotFoundError):
         main_mod.check_args_validity(args)
 
@@ -119,7 +121,8 @@ def test_check_args_handles_true_dag_and_prior(
     prior_file = tmp_path / "prior.json"
     prior_data = [["A", "B"]]
     prior_file.write_text(json.dumps({"prior": prior_data}))
-    monkeypatch.setattr(main_mod.utils, "graph_from_dot_file", lambda path: "graph")
+    monkeypatch.setattr(
+        main_mod.utils, "graph_from_dot_file", lambda path: "graph")
     args = args_factory(
         dataset=sample_csv,
         method='pc',
@@ -150,7 +153,8 @@ def test_main_trains_and_saves(monkeypatch, tmp_path):
     class DummyDiscovery:
         def __init__(self, **kwargs):
             self.init_args = kwargs
-            self.trainer = {'initial': SimpleNamespace(dag="start", metrics=None)}
+            self.trainer = {'initial': SimpleNamespace(
+                dag="start", metrics=None)}
             self.saved = None
             self.printed = None
 
@@ -188,7 +192,8 @@ def test_main_trains_and_saves(monkeypatch, tmp_path):
     }
     times = iter([100.0, 101.0])
     monkeypatch.setattr(main_mod.time, "time", lambda: next(times))
-    monkeypatch.setattr(main_mod.utils, "format_time", lambda delta: (delta, "seconds"))
+    monkeypatch.setattr(main_mod.utils, "format_time",
+                        lambda delta: (delta, "seconds"))
     saved_paths = []
     monkeypatch.setattr(main_mod.utils, "graph_to_dot_file",
                         lambda dag, path: saved_paths.append((dag, path)))
@@ -211,7 +216,8 @@ def test_main_trains_and_saves(monkeypatch, tmp_path):
 def test_main_loads_existing_model(monkeypatch):
     class DummyDiscovery:
         def __init__(self, **kwargs):
-            self.trainer = {'one': SimpleNamespace(dag='loaded', metrics='metrics')}
+            self.trainer = {'one': SimpleNamespace(
+                dag='loaded', metrics='metrics')}
 
         def load(self, path):
             self.loaded = path
@@ -255,7 +261,8 @@ def test_main_loads_existing_model(monkeypatch):
     monkeypatch.setattr(main_mod, "parse_args", lambda: SimpleNamespace())
     monkeypatch.setattr(main_mod, "check_args_validity", lambda _: run_values)
     monkeypatch.setattr(main_mod.time, "time", lambda: 0.0)
-    monkeypatch.setattr(main_mod.utils, "format_time", lambda delta: (delta, "seconds"))
+    monkeypatch.setattr(main_mod.utils, "format_time",
+                        lambda delta: (delta, "seconds"))
     main_mod.main()
     assert instances[0].loaded == 'model.pkl'
 
@@ -294,7 +301,8 @@ def test_combine_and_evaluate_non_rex_sets_metrics(sample_csv, tmp_path, monkeyp
     gd = make_graph_discovery(sample_csv, tmp_path, model_type='pc')
     gd.ref_graph = nx.DiGraph()
     gd.data_columns = ['X', 'Y']
-    trainer = SimpleNamespace(pc=SimpleNamespace(dag="dag"), dag=None, metrics=None)
+    trainer = SimpleNamespace(pc=SimpleNamespace(
+        dag="dag"), dag=None, metrics=None)
     gd.trainer = {f"{gd.dataset_name}_pc": trainer}
     monkeypatch.setattr(
         "causalexplain.causalexplainer.evaluate_graph",
@@ -306,6 +314,7 @@ def test_combine_and_evaluate_non_rex_sets_metrics(sample_csv, tmp_path, monkeyp
 
 def test_combine_and_evaluate_rex_combines(sample_csv, tmp_path, monkeypatch):
     gd = make_graph_discovery(sample_csv, tmp_path)
+
     class Estimator:
         def __init__(self, label):
             self.dag = f"dag_{label}"
@@ -405,5 +414,6 @@ def test_plot_calls_plot_module(sample_csv, tmp_path, monkeypatch):
 
 def test_model_property_returns_last_trainer(sample_csv, tmp_path):
     gd = make_graph_discovery(sample_csv, tmp_path, model_type='pc')
-    gd.trainer = {'first': SimpleNamespace(), 'second': SimpleNamespace(marker=True)}
+    gd.trainer = {'first': SimpleNamespace(
+    ), 'second': SimpleNamespace(marker=True)}
     assert gd.model.marker is True
