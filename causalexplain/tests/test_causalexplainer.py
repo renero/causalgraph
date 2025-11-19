@@ -1,8 +1,11 @@
-import pytest
+import os
+from unittest.mock import MagicMock
+
 import pandas as pd
+import pytest
+
 from causalexplain.causalexplainer import GraphDiscovery
 from causalexplain.common import DEFAULT_REGRESSORS
-import os
 
 
 @pytest.fixture
@@ -34,9 +37,10 @@ def sample_dot(tmp_path):
 
 
 @pytest.fixture
-def mock_experiment(mocker):
-    """Mock the Experiment class"""
-    mock = mocker.patch('causalexplain.causalexplainer.Experiment')
+def mock_experiment(monkeypatch):
+    """Mock the Experiment class without relying on pytest-mock"""
+    mock = MagicMock()
+    monkeypatch.setattr('causalexplain.causalexplainer.Experiment', mock)
     return mock
 
 
@@ -221,4 +225,3 @@ def test_create_experiments_empty_regressors(mock_experiment, sample_csv, sample
 
     assert len(trainers) == 0
     mock_experiment.assert_not_called()
-
