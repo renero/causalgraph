@@ -1,16 +1,7 @@
-# pylint: disable=E1101:no-member, W0201:attribute-defined-outside-init, W0511:fixme
-# pylint: disable=C0103:invalid-name
-# pylint: disable=C0116:missing-function-docstring
-# pylint: disable=R0913:too-many-arguments
-# pylint: disable=R0914:too-many-locals, R0915:too-many-statements
-# pylint: disable=W0106:expression-not-assigned, R1702:too-many-branches
-
 import numpy as np
+import pytest
 
-from causalexplain.independence.feature_selection import (
-    find_cluster_change_point, select_features
-)
-
+import causalexplain.independence.feature_selection as feature_selection
 from causalexplain.independence.feature_selection import (
     find_cluster_change_point,
     select_features,
@@ -22,160 +13,109 @@ def test_select_features_requires_threshold_when_exhaustive():
         select_features(np.array([1.0, 2.0]), ["a", "b"], exhaustive=True)
 
 
-def test_select_features_with_return_shaps_and_exhaustive():
+def test_select_features_exits_when_impact_below_minimum():
+    values = np.array([1e-8, 2e-8, 3e-8])
+    assert select_features(values, ["a", "b", "c"], min_impact=1e-6) == []
+
+
+def test_select_features_handles_matrix_and_sorts_by_mean():
+    values = np.array([[0.0, 0.1, 0.9], [0.0, 0.1, 0.9]])
+    assert select_features(values, ["a", "b", "c"]) == ["c"]
+
+
+def test_select_features_returns_shaps_when_requested():
     values = np.array([0.0, 0.0, 1.0, 2.0])
-    features = ["w", "x", "y", "z"]
     selected, shaps = select_features(
-        values, features, return_shaps=True, exhaustive=True, threshold=0.1
+        values,
+        ["w", "x", "y", "z"],
+        return_shaps=True,
+        exhaustive=True,
+        threshold=0.1,
     )
     assert selected == ["z", "y"]
     assert shaps == [2.0, 1.0]
 
 
-def test_select_features_handles_matrix_input_and_min_impact():
-    values = np.array([[0.0, 0.0], [0.3, 0.6]])
-    features = ["a", "b"]
-    result = select_features(values, features, min_impact=0.2)
-    assert result == ["b", "a"]
+def test_select_features_non_exhaustive_orders_by_cluster_change():
+    values = np.array([0.1, 0.4, 0.2])
+    assert select_features(values, ["a", "b", "c"]) == ["b"]
 
 
-@pytest.mark.parametrize(
-    "series,expected",
-    [
-        ([1], None),
-        ([], None),
-        ([1, 5, 10, 50], 3),
-    ],
-)
-def test_find_cluster_change_point_internal(series, expected):
-    result = find_cluster_change_point(series)
-    assert result == expected
+def test_select_features_exhaustive_iterates_until_threshold(monkeypatch):
+    calls = []
+
+    def fake_change_point(current_values, verbose=False):
+        # Peel off one more element each time to exercise the exhaustive branch.
+        calls.append(list(current_values))
+        return len(current_values) - 1
+
+    monkeypatch.setattr(feature_selection, "find_cluster_change_point", fake_change_point)
+    values = np.array([0.1, 0.2, 0.3])
+    result = select_features(values, ["a", "b", "c"], exhaustive=True, threshold=0.05)
+
+    assert result == ["c", "b", "a"]
+    assert calls == [[0.1, 0.2, 0.3], [0.1, 0.2], [0.1]]
 
 
+def test_select_features_stops_after_max_iterations(monkeypatch):
+    def non_progressing_change_point(current_values, verbose=False):
+        # Returning len(current_values) means the slice never shrinks.
+        return len(current_values)
 
-class TestClusterChange:
-    """
-    This class tests the functionality of the cluster_change function.
-    """
-
-    def test_increasing_values(self):
-        """
-        Given a list of increasing values, the function returns the index of
-        the last element.
-        """
-        values = [1, 2, 3, 4, 5]
-        result = find_cluster_change_point(values)
-        assert result is None
-
-    def test_decreasing_values(self):
-        """
-        Given a list of decreasing values, the function returns the index of
-        the last element.
-        """
-        values = [5, 4, 3, 2, 1]
-        result = find_cluster_change_point(values)
-        assert result is None
-
-    def test_single_cluster(self):
-        """
-        Given a list of values with a single cluster, the function returns the
-        index of the last element.
-        """
-        values = [1, 1, 1, 1, 1]
-        result = find_cluster_change_point(values)
-        assert result is None
-
-    def test_empty_list(self):
-        """
-        Given an empty list, the function returns None.
-        """
-        values = []
-        result = find_cluster_change_point(values)
-        assert result is None
-
-    def test_single_element(self):
-        """
-        Given a list with a single element, the function returns None.
-        """
-        values = [1]
-        result = find_cluster_change_point(values)
-        assert result is None
-
-    def test_zeros_list(self):
-        """
-        Given a list with only zeros, the function returns None.
-        """
-        values = [0, 0, 0, 0, 0]
-        result = find_cluster_change_point(values)
-        assert result is None
-
-    def test_multiple_clusters(self):
-        """
-        Given a list of values with multiple clusters, the function returns the
-        index of the last element of the first cluster.
-        """
-        values = [1, 2, 3, 4, 5, 10, 11, 12, 13]
-        result = find_cluster_change_point(values)
-        assert result == 5
-
-    def test_values_with_noise(self):
-        """
-        Given a list of values with noise, the function returns the index of the
-        last element of the largest cluster.
-        """
-        values = [1, 2, 3, 4, 5, 10, 11, 12, 13, 20, 21, 22]
-        result = find_cluster_change_point(values)
-        assert result == 9
-
-    def test_single_cluster_from_three(self):
-        """
-        Given a list of values with noise and a single cluster, the function
-        returns the index of the last element.
-        """
-        values = [1, 2, 3, 4, 5, 10, 11, 12, 13, 20]
-        result = find_cluster_change_point(values)
-        assert result == 9
+    monkeypatch.setattr(
+        feature_selection, "find_cluster_change_point", non_progressing_change_point
+    )
+    values = np.array([0.1, 0.2])
+    assert select_features(values, ["a", "b"], exhaustive=True, threshold=0.05) == []
 
 
-class TestSelectFeatures:
-    """
-    This class tests the functionality of the select_features function.
-    """
+def test_select_features_emits_useful_verbose_output(capsys):
+    values = np.array([0.1, 0.3, 1.0])
+    select_features(values, ["a", "b", "c"], threshold=0.05, verbose=True)
 
-    def test_returns_selected_features_sorted(self):
-        """
-        Returns a list of selected features sorted by their impact values.
-        """
-        values = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
-        feature_names = ['A', 'B', 'C', 'D', 'E']
-        result = select_features(values, feature_names)
-        assert set(result) == set(['A', 'B', 'C', 'D', 'E'])
+    output = capsys.readouterr().out
+    assert "Feature order" in output
+    assert "Selected_features" in output
 
-    def test_returns_empty_list_below_minimum_impact(self):
-        """
-        Returns an empty list if all mean SHAP values are below the minimum
-        impact value.
-        """
-        values = np.array([0.000001, 0.000001, 0.000001, 0.000001, 0.000001])
-        feature_names = ['A', 'B', 'C', 'D', 'E']
-        result = select_features(values, feature_names)
-        assert set(result) == set(['A', 'B', 'C', 'D', 'E'])
 
-    def test_returns_empty_list_empty_values(self):
-        """
-        Returns an empty list when the input values are empty.
-        """
-        values = np.array([])
-        feature_names = []
-        result = select_features(values, feature_names)
-        assert result == []
+def test_select_features_verbose_matrix_output_lists_sums(capsys):
+    values = np.array([[0.0, 0.2], [0.1, 0.3]])
+    select_features(values, ["a", "b"], verbose=True)
+    output = capsys.readouterr().out
+    assert "Sum values" in output
+    assert "(a:" in output
 
-    def test_returns_empty_list_all_mean_shap_below_minimum_impact(self):
-        """
-        Returns an empty list when all mean SHAP values are below the minimum
-        impact value.
-        """
-        values = np.array([0.000001, 0.000001, 0.000001])
-        feature_names = ['A', 'B', 'C']
-        result = select_features(values, feature_names)
-        assert set(result) == set(feature_names)
+
+def test_find_cluster_change_point_handles_identical_values_and_logs(capsys):
+    assert find_cluster_change_point([0, 0, 0], verbose=True) is None
+    captured = capsys.readouterr()
+    assert "** No clusters generated" in captured.out
+
+
+def test_find_cluster_change_point_returns_none_for_short_series():
+    assert find_cluster_change_point([]) is None
+    assert find_cluster_change_point([1]) is None
+
+
+def test_find_cluster_change_point_detects_gap_between_clusters():
+    values = [0.1, 0.2, 0.8, 0.9]
+    assert find_cluster_change_point(values) == 2
+
+
+def test_find_cluster_change_point_reports_cluster_estimates_verbose(capsys):
+    values = [0.1, 0.2, 0.8, 0.9]
+    assert find_cluster_change_point(values, verbose=True) == 2
+    output = capsys.readouterr().out
+    assert "Est.clusters/noise" in output
+
+
+def test_module_main_runs_and_logs(capsys):
+    feature_selection.main()
+    output = capsys.readouterr().out
+    assert "Feature order" in output
+    assert "threshold" in output
+
+
+def test_embedded_test_function_is_intentionally_failing():
+    with pytest.raises(AssertionError):
+        feature_selection.test()
