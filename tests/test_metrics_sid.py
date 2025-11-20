@@ -180,3 +180,127 @@ def test_sid_sparse_branch_surfaces_sparse_limitations():
     graph = np.array([[0, 1], [0, 0]])
     with pytest.raises(TypeError):
         sid_module.SID(graph, graph, spars=True)
+
+
+# Legacy SID consistency tests (formerly in test_metrics_SID_legacy.py)
+
+
+def _is_dag(adj_matrix: np.ndarray) -> bool:
+    graph = nx.from_numpy_array(adj_matrix, create_using=nx.DiGraph)
+    return nx.is_directed_acyclic_graph(graph)
+
+
+def _compared_sid(trueGraph: np.ndarray, estGraph: np.ndarray, sid_fn) -> dict:
+    if not _is_dag(estGraph):
+        return {"sid": 0, "sidLowerBound": 0.0, "sidUpperBound": 0.0}
+    if not isinstance(trueGraph, np.ndarray):
+        trueGraph = np.array(trueGraph)
+    if not isinstance(estGraph, np.ndarray):
+        estGraph = np.array(estGraph)
+    trueGraph = np.matrix(trueGraph)
+    estGraph = np.matrix(estGraph)
+    s = sid_fn(trueGraph, estGraph, edge_direction="from row to column")
+    return {"sid": s[1], "sidLowerBound": s[0], "sidUpperBound": s[0]}
+
+
+def _random_dag(size: int, probability: float) -> np.ndarray:
+    rng = np.random.default_rng(0)
+    adj = rng.binomial(1, probability, size=(size, size)).astype(np.int8)
+    adj = np.triu(adj, 1)
+    perm = rng.permutation(size)
+    return adj[perm, :][:, perm]
+
+
+@pytest.fixture
+def gadjid_sid():
+    mod = pytest.importorskip("gadjid", reason="gadjid package required for legacy SID tests")
+    return mod.sid
+
+
+def test_manual_sid_matches_expected(gadjid_sid):
+    G = np.array(
+        [
+            [0, 1, 1, 1, 1],
+            [0, 0, 1, 1, 1],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+        ]
+    )
+    H1 = np.array(
+        [
+            [0, 1, 1, 1, 1],
+            [0, 0, 1, 1, 1],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+        ]
+    )
+    H2 = np.array(
+        [
+            [0, 0, 1, 1, 1],
+            [1, 0, 1, 1, 1],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+        ]
+    )
+    H3 = np.array(
+        [
+            [0, 1, 1, 1, 1],
+            [1, 0, 1, 1, 1],
+            [1, 1, 0, 1, 0],
+            [1, 1, 1, 0, 0],
+            [1, 1, 0, 0, 0],
+        ]
+    )
+    H4 = np.array(
+        [
+            [0, 0, 1, 1, 1],
+            [0, 0, 0, 1, 0],
+            [1, 1, 0, 1, 0],
+            [0, 1, 0, 0, 1],
+            [1, 0, 1, 0, 0],
+        ]
+    )
+    H5 = np.array(
+        [
+            [0, 0, 1, 1, 0],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+        ]
+    )
+
+    sid1 = sid_module.SID(G, H1)
+    assert sid1["sid"] == 0
+    sid2 = sid_module.SID(G, H2)
+    assert sid2["sid"] == 8
+    sid3 = sid_module.SID(G, H3)
+    assert sid3["sidLowerBound"] == 0
+    assert sid3["sidUpperBound"] == 15
+    sid4 = sid_module.SID(G, H4)
+    assert sid4["sidLowerBound"] == 8
+    assert sid4["sidUpperBound"] == 16
+    sid5 = sid_module.SID(G, H5)
+    assert sid5["sid"] == 12
+
+
+def test_compared_sid_consistent_with_sid(gadjid_sid):
+    n = 20
+    threshold = 0.2
+    count = 0
+    for _ in range(n):
+        p = np.random.randint(3, 20)
+        G = _random_dag(p, 0.2)
+        H = G.copy()
+        indices = np.where(G == 1)
+        for i in range(len(indices[0])):
+            if np.random.random() > threshold:
+                H[indices[0][i]][indices[1][i]] = 0
+        sid1 = sid_module.SID(G, H, output=False)
+        sid2 = _compared_sid(G, H, sid_fn=gadjid_sid)
+        if sid1["sid"] == sid2["sid"]:
+            count += 1
+    assert count / n == 1.0
