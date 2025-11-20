@@ -16,8 +16,10 @@ class DummyTrainer:
         self.args = args
         self.kwargs = kwargs
         self.logger = kwargs.get("logger")
+        self.fit_called = False
 
     def fit(self, *_, **__):
+        self.fit_called = True
         return None
 
 
@@ -96,3 +98,53 @@ def test_mlp_model_initializes_trainer(monkeypatch):
     assert isinstance(model.trainer, DummyTrainer)
     assert model.trainer.kwargs["accelerator"] == "cpu"
     assert model.trainer.kwargs["log_every_n_steps"] == 5
+
+
+def test_init_callbacks_adds_progress_bar(monkeypatch):
+    monkeypatch.setattr(_models, "TensorBoardLogger", DummyLogger)
+
+    class DummyBar:
+        def init_train_tqdm(self):
+            return type("TQDM", (), {"dynamic_ncols": False, "ncols": 0})()
+
+    monkeypatch.setattr(_models, "TQDMProgressBar", DummyBar)
+    df = _small_dataframe()
+    base = BaseModel(
+        target="target",
+        dataframe=df,
+        test_size=0.5,
+        batch_size=2,
+        tb_suffix="test",
+        seed=0,
+    )
+    base.init_callbacks(early_stop=True, prog_bar=True)
+    bar = next(cb for cb in base.callbacks if isinstance(cb, DummyBar))
+    result = bar.init_train_tqdm()
+    assert getattr(result, "ncols", None) == 0
+    assert any(cb.__class__.__name__ == "EarlyStopping" for cb in base.callbacks)
+
+
+def test_mlp_model_train_invokes_trainer(monkeypatch):
+    monkeypatch.setattr(_models, "TensorBoardLogger", DummyLogger)
+    dummy_trainer = DummyTrainer()
+    monkeypatch.setattr(_models, "Trainer", lambda *a, **k: dummy_trainer)
+    df = _small_dataframe()
+
+    model = MLPModel(
+        target="target",
+        input_size=df.shape[1],
+        hidden_dim=[2],
+        activation="relu",
+        learning_rate=0.01,
+        batch_size=2,
+        loss_fn="mse",
+        dropout=0.0,
+        num_epochs=1,
+        dataframe=df,
+        test_size=0.4,
+        device="cpu",
+        seed=0,
+    )
+
+    model.train()
+    assert dummy_trainer.fit_called is True

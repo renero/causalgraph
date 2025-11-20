@@ -83,6 +83,30 @@ def test_layer_and_summarize_weights(monkeypatch):
     assert summary.shape[0] == dummy._weights[0][1]._array.shape[1]
 
 
+def test_summarize_weights_scales_and_plots(monkeypatch):
+    monkeypatch.setattr(wu.plt, "show", lambda *_, **__: None)
+    values = np.array([[1.0, 0.5], [0.2, -0.4]])
+
+    class Wrapper:
+        def __init__(self):
+            self.model = type("M", (), {"named_parameters": lambda *_: [("weight", DummyParam(values))]})
+            self.columns = ["a", "Noise"]
+
+    weights_map = {"a": Wrapper(), "b": Wrapper()}
+    scaled = wu.summarize_weights(weights_map, feature_names=["a", "b"], scale=True)
+    assert np.allclose(scaled.mean().values, 0, atol=1e-6)
+
+    weights_df = pd.DataFrame(
+        [[0.0, 0.0, 0.0, 0.1, 0.1, 0.1], [1.0, 1.0, 1.0, 0.5, 0.5, 0.5]],
+        columns=["psd_a", "med_a", "avg_a", "psd_b", "med_b", "avg_b"],
+        index=["a", "b"],
+    )
+    relationships = wu.identify_relationships(
+        weights_df, feature_names=["a", "b"], plot=True, eps=0.5, min_counts=1
+    )
+    assert set(relationships.keys()) == {"a", "b"}
+
+
 def test_identify_relationships_detects_sparse_clusters():
     columns = [
         "psd_a",
@@ -132,6 +156,8 @@ def test_shap_value_helpers(monkeypatch):
 
     avg = wu._average_shap_values({"col": shap_values}, ["col"], abs=True)
     assert avg.shape[0] == 1
+    signed_avg = wu._average_shap_values({"col": shap_values}, ["col"], abs=False)
+    assert signed_avg.shape == avg.shape
 
 
 def test_find_shap_elbow_uses_knee_locator(monkeypatch):
@@ -157,7 +183,7 @@ def test_identify_edges_and_orientation():
     g = nx.DiGraph()
     g.add_edge("a", "b", weight=1.0)
     g.add_edge("b", "a", weight=0.8)
-    oriented = wu._orient_edges_based_on_shap(g)
+    oriented = wu._orient_edges_based_on_shap(g, verbose=True)
     assert oriented.has_edge("a", "b") != oriented.has_edge("b", "a")
 
 

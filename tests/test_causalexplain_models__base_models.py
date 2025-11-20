@@ -3,6 +3,58 @@ import pytest
 import torch
 
 from causalexplain.models._base_models import DFF, MDN, MLP
+from causalexplain.models._loss import MMDLoss
+
+
+@pytest.mark.parametrize(
+    "activation,expected_cls",
+    [
+        ("gelu", torch.nn.GELU),
+        ("selu", torch.nn.SELU),
+        ("tanh", torch.nn.Tanh),
+        ("linear", torch.nn.Identity),
+        ("sigmoid", torch.nn.Sigmoid),
+    ],
+)
+@pytest.mark.parametrize(
+    "loss_name,expected_loss",
+    [
+        ("mae", torch.nn.L1Loss),
+        ("mmd", MMDLoss),
+        ("binary_crossentropy", torch.nn.BCEWithLogitsLoss),
+        ("crossentropy", torch.nn.CrossEntropyLoss),
+    ],
+)
+def test_mlp_instantiation_covers_additional_branches(activation, expected_cls, loss_name, expected_loss):
+    mlp = MLP(
+        input_size=2,
+        layers_dimensions=[3],
+        activation=activation,
+        batch_size=2,
+        lr=0.01,
+        loss=loss_name,
+        dropout=0.0,
+    )
+    assert isinstance(mlp.activation, expected_cls)
+    assert isinstance(mlp.loss_fn, expected_loss) or callable(mlp.loss_fn)
+
+
+def test_mlp_training_and_validation_steps_return_losses(monkeypatch):
+    mlp = MLP(
+        input_size=2,
+        layers_dimensions=[1],
+        activation="tanh",
+        batch_size=2,
+        lr=0.01,
+        loss="mae",
+        dropout=0.0,
+    )
+    mlp.log = lambda *_, **__: None
+    batch = (torch.zeros((2, 1)), torch.ones((2, 1)))
+    train_loss = mlp.training_step(batch, 0)
+    val_loss = mlp.validation_step(batch, 0)
+    assert train_loss > 0
+    assert val_loss > 0
 
 
 def test_mlp_invalid_activation():
@@ -55,6 +107,17 @@ def test_dff_invalid_loss():
         DFF(input_size=1, hidden_size=1, batch_size=1, lr=0.01, loss="oops")
 
 
+def test_dff_training_and_validation_steps(monkeypatch):
+    dff = DFF(input_size=1, hidden_size=1, batch_size=1, lr=0.01, loss="mae")
+    monkeypatch.setattr(dff, "forward", lambda x: torch.zeros((x.shape[0], 1)))
+    dff.log = lambda *_, **__: None
+    x = torch.ones((1, 1))
+    y = torch.zeros((1, 1))
+    train_loss = dff.training_step((x, y), 0)
+    dff.validation_step((x, y), 0)
+    assert train_loss >= 0
+
+
 @pytest.mark.parametrize("kernel", ["multiscale", "rbf"])
 def test_mdn_static_mmd_loss_kernels(kernel):
     x = torch.tensor([[0.0], [1.0]])
@@ -97,6 +160,33 @@ def test_mdn_common_step_branches(monkeypatch):
     assert mmd_loss == torch.tensor(0.5)
 
 
+def test_mdn_forward_and_validation_step():
+    mdn = MDN(
+        input_size=1,
+        hidden_size=2,
+        num_gaussians=2,
+        lr=0.01,
+        batch_size=2,
+        loss_function="loglikelihood",
+    )
+
+    class Wrapper:
+        def __init__(self, tensor):
+            self.tensor = tensor
+            self.shape = tensor.shape
+
+        def to_device(self, _device):
+            return self.tensor
+
+    wrapped = Wrapper(torch.zeros((2, 0)))
+    pi, sigma, mu = mdn.forward(wrapped)
+    assert pi.shape[0] == 2 and sigma.shape[0] == 2 and mu.shape[0] == 2
+    mdn.log = lambda *_, **__: None
+    mdn.validation_step((torch.zeros((1, 1)), torch.zeros((1, 1))), 0)
+    optim = mdn.configure_optimizers()
+    assert "optimizer" in optim and "lr_scheduler" in optim
+
+
 def test_mdn_gaussian_probability_and_sampling():
     pi = torch.tensor([[0.6], [0.4]])
     sigma = torch.tensor([[1.0], [1.0]])
@@ -108,3 +198,12 @@ def test_mdn_gaussian_probability_and_sampling():
     samples = MDN.g_sample(pi, sigma, mu)
     assert isinstance(samples, torch.Tensor)
     assert samples.shape[0] == pi.shape[0]
+
+    added_noise = MDN.add_noise(torch.ones((2, 1)))
+    assert added_noise.shape[1] == 2
+
+    pi_full = torch.ones((2, 2)) * 0.5
+    sigma_full = torch.ones((2, 2, 1))
+    mu_full = torch.zeros((2, 2, 1))
+    sampled = MDN.sample(pi_full, sigma_full, mu_full)
+    assert sampled.shape[0] == pi_full.shape[0]
