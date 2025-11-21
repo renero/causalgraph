@@ -13,6 +13,7 @@ The LiNGAM Project: https://sites.google.com/site/sshimizu06/lingam
 import numpy as np
 import pandas as pd
 import networkx as nx
+import types
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import scale
@@ -88,7 +89,8 @@ class DirectLiNGAM(_BaseLiNGAM):
         self.verbose = verbose
 
         if self._Aknw is not None:
-            self._Aknw = check_array(self._Aknw)
+            # Allow NaN entries to denote unknown relationships
+            self._Aknw = check_array(self._Aknw, force_all_finite="allow-nan")
             self._Aknw = np.where(self._Aknw < 0, np.nan, self._Aknw)
 
             # Extract all partial orders in prior knowledge matrix
@@ -130,7 +132,10 @@ class DirectLiNGAM(_BaseLiNGAM):
             if self._measure == "kernel":
                 m = self._search_causal_order_kernel(X_, U)
             else:
-                m = self._search_causal_order(X_, U)
+                search_method = self._search_causal_order
+                if isinstance(search_method, types.FunctionType):
+                    search_method = types.MethodType(search_method, self)
+                m = search_method(X_, U)
             for i in U:
                 if i != m:
                     X_[:, i] = self._residual(X_[:, i], X_[:, m])
@@ -234,7 +239,8 @@ class DirectLiNGAM(_BaseLiNGAM):
 
         # Apply prior knowledge in a strong way
         if not self._apply_prior_knowledge_softly:
-            Uc = [i for i in U if i not in self._partial_orders[:, 1]]
+            # Exclude nodes that are constrained to appear after others
+            Uc = [i for i in U if i not in self._partial_orders[:, 0]]
             return Uc, []
 
         # Find exogenous features

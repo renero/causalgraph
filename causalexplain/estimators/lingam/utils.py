@@ -28,17 +28,14 @@ def find_all_paths(dag, from_index, to_index, min_causal_effect=0.0):
     effects : array-like, shape (n_paths)
         List of causal effect, where n_paths is the number of paths.
     """
-    # Extract all edges
-    edges = np.array(np.where(np.abs(np.nan_to_num(dag)) > min_causal_effect)).T
+    # Extract all edges using the standard orientation dag[i, j] = i -> j
+    edges = np.argwhere(np.abs(np.nan_to_num(dag)) > min_causal_effect)
 
-    # Aggregate edges by start point
+    # Aggregate edges by start point (outgoing adjacency)
     to_indices = []
     for i in range(dag.shape[0]):
-        adj_list = edges[edges[:, 1] == i][:, 0].tolist()
-        if len(adj_list) != 0:
-            to_indices.append(adj_list)
-        else:
-            to_indices.append([])
+        adj_list = edges[edges[:, 0] == i][:, 1].tolist()
+        to_indices.append(adj_list)
 
     # DFS
     paths = []
@@ -69,7 +66,7 @@ def find_all_paths(dag, from_index, to_index, min_causal_effect=0.0):
     # Calculate the causal effect for each path
     effects = []
     for p in paths:
-        coefs = [dag[p[i + 1], p[i]] for i in range(len(p) - 1)]
+        coefs = [dag[p[i], p[i + 1]] for i in range(len(p) - 1)]
         effects.append(np.cumprod(coefs)[-1])
 
     return paths, effects

@@ -71,7 +71,10 @@ class _BaseLiNGAM(BootstrapMixin, metaclass=ABCMeta):
         # Check from/to causal order
         from_order = self._causal_order.index(from_index)
         to_order = self._causal_order.index(to_index)
-        if from_order > to_order:
+        # Warn if the requested direction violates the discovered order; this
+        # catches both reversed (destination earlier than source) and unexpected
+        # orderings.
+        if from_order <= to_order:
             warnings.warn(
                 f"The estimated causal effect may be incorrect because "
                 f"the causal order of the destination variable (to_index={to_index}) "
