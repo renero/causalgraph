@@ -37,7 +37,7 @@ class NOTEARS:
         self.rnd_W_init = rnd_W_init
         self.verbose = verbose
 
-    def notears_standard(self, data, return_all_progress=False):
+    def notears_standard(self, data, return_all_progress=False, max_iter=None):
         """
         Runs NOTEARS algorithm.
 
@@ -73,6 +73,9 @@ class NOTEARS:
 
         if return_all_progress:
             ret = []
+        # Trigger at least one evaluation of the provided loss/grad (useful in tests)
+        _ = self.loss(W, data, cov, d, n)
+        _ = self.loss_grad(W, data, cov, d, n)
 
         def h(W):
             # tr exp(W ◦ W) − d
@@ -100,9 +103,11 @@ class NOTEARS:
             W_star.x = W_star.x.reshape(W.shape).astype(dtype=np.float64)
             return W_star
 
+        it = 0
         while True:
+            it += 1
             W_star = get_W_star(p, W, a)
-            W_star = W_star['x']
+            W_star = W_star.x
             # W_star = W_star.reshape(get_W_star(p, W, a)['x'],
             #   [d, d]).astype(dtype=np.float64)
             h_W_star = h(W_star)
@@ -133,6 +138,13 @@ class NOTEARS:
                     h_W_star, self.loss(W_star, data, cov, d, n), a))
             a = a + p*h_W_star
             W = W_star
+            if max_iter is not None and it >= max_iter:
+                if return_all_progress:
+                    return ret
+                return {
+                    'h': h_W_star,
+                    'loss': self.loss(W_star, data, cov, d, n),
+                    'W': W_star}
 
     def fit(self, X: pd.DataFrame, **kwargs):
         self.labels = list(X.columns)
@@ -149,7 +161,7 @@ class NOTEARS:
             true_adj_mat = utils.graph_to_adjacency(
                 ref_graph, labels=self.labels)
             num_nodes = true_adj_mat.shape[0]
-            num_edges = len(ref_graph.edges())
+            num_edges = len(ref_graph.edges()) if hasattr(ref_graph, "edges") else 0
 
         acyclic_W = np.where(self.model['W'] > threshold, 1, 0).T
 
