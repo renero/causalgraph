@@ -14,4 +14,7 @@ class ColumnsDataset(Dataset):
         return len(self.target)
 
     def __getitem__(self, idx):
-        return [self.features[idx], self.target[idx]]
+        # Align returned feature dtype with the current global default to avoid
+        # downstream dtype mismatches (some tests change the default to double).
+        features = self.features[idx].to(torch.get_default_dtype())
+        return [features, self.target[idx]]
