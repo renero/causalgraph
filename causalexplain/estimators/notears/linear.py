@@ -87,7 +87,7 @@ def notears_linear(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_max=1e+1
 
 
 if __name__ == '__main__':
-    from notears import utils
+    from causalexplain.estimators.notears import utils
     utils.set_random_seed(1)
 
     n, d, s0, graph_type, sem_type = 100, 20, 20, 'ER', 'gauss'
@@ -103,4 +103,3 @@ if __name__ == '__main__':
     np.savetxt('W_est.csv', W_est, delimiter=',')
     acc = utils.count_accuracy(B_true, W_est != 0)
     print(acc)
-

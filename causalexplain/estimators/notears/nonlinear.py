@@ -1,6 +1,7 @@
-from notears.locally_connected import LocallyConnected
-from notears.lbfgsb_scipy import LBFGSBScipy
-from notears.trace_expm import trace_expm
+from causalexplain.estimators.notears.locally_connected import LocallyConnected
+from causalexplain.estimators.notears.lbfgsb_scipy import LBFGSBScipy
+from causalexplain.estimators.notears.trace_expm import trace_expm
+from causalexplain.estimators.notears import utils as ut
 import torch
 import torch.nn as nn
 import numpy as np
@@ -132,7 +133,7 @@ class NotearsSobolev(nn.Module):
         fc1_weight = self.fc1_pos.weight - self.fc1_neg.weight  # [j, ik]
         fc1_weight = fc1_weight.view(self.d, self.d, self.k)  # [j, i, k]
         A = torch.sum(fc1_weight * fc1_weight, dim=2).t()  # [i, j]
-        h = trace_expm(A) - d  # (Zheng et al. 2018)
+        h = trace_expm(A) - self.d  # (Zheng et al. 2018)
         # A different formulation, slightly faster at the cost of numerical stability
         # M = torch.eye(self.d) + A / self.d  # (Yu et al. 2019)
         # E = torch.matrix_power(M, self.d - 1)
@@ -214,7 +215,6 @@ def main():
     torch.set_default_dtype(torch.double)
     np.set_printoptions(precision=3)
 
-    import notears.utils as ut
     ut.set_random_seed(123)
 
     n, d, s0, graph_type, sem_type = 200, 5, 9, 'ER', 'mim'
