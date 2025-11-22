@@ -2,8 +2,8 @@
 
 [run]
 branch = True
-source = causalgraph
-include = */causalgraph/*
+source = causalexplain
+include = */causalexplain/*
 omit =
     */setup.py
 

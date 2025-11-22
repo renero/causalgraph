@@ -1,6 +1,6 @@
 {
     "terminal.integrated.env.osx": {
-        "PYTHONPATH": "${workspaceFolder}/causalgraph"
+        "PYTHONPATH": "${workspaceFolder}/causalexplain"
     },
     "python.linting.cwd": "",
     "python.linting.enabled": true,

@@ -7,7 +7,7 @@
         {
             "name": "Debug: Current File with my args",
             "python": "/Users/renero/.pyenv/versions/causality/bin/python",
-            "cwd": "/Users/renero/code/causalgraph",
+            "cwd": "/Users/renero/code/causalexplain",
             "type": "debugpy",
             "request": "launch",
             "program": "${file}",
