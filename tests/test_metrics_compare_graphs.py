@@ -1,10 +1,223 @@
 import numpy as np
 import networkx as nx
-from ..metrics.compare_graphs import (
-    _conf_mat_directed, _is_weighted, _binary_adj_matrix, _adjacency,
-    _weighted_adjacency, _intersect_matrices, _positive, _negative,
-    _conf_mat_undirected, _precision, _recall, _f1, _aupr
+import pytest
+from causalexplain.metrics.compare_graphs import (
+    Metrics, _adjacency, _aupr, _binary_adj_matrix, _conf_mat,
+    _conf_mat_directed, _conf_mat_undirected, _confusion_matrix, _f1,
+    _is_weighted, _intersect_matrices, _negative, _positive, _precision,
+    _recall, _SHD, _shallow_copy, _weighted_adjacency, evaluate_graph
 )
+
+
+@pytest.fixture(autouse=True)
+def _isolated_matplotlib_cache(tmp_path, monkeypatch):
+    monkeypatch.setenv("MPLCONFIGDIR", str(tmp_path))
+
+
+@pytest.fixture
+def sid_statistics():
+    return {"sid": 2.0, "sidLowerBound": 1.0, "sidUpperBound": 3.0}
+
+
+@pytest.fixture
+def metrics_instance(sid_statistics):
+    return Metrics(
+        Tp=3,
+        Tn=5,
+        Fn=2,
+        Fp=1,
+        precision=0.75,
+        recall=0.6,
+        aupr=0.65,
+        f1=0.6666666667,
+        shd=2,
+        sid=sid_statistics,
+    )
+
+
+@pytest.fixture
+def directed_graph_pair():
+    truth = nx.DiGraph()
+    truth.add_edges_from([("a", "b"), ("b", "c")])
+    est = nx.DiGraph()
+    est.add_edges_from([("a", "b"), ("c", "b")])
+    feature_names = ["a", "b", "c"]
+    return truth, est, feature_names
+
+
+@pytest.fixture
+def undirected_graph_pair():
+    truth = nx.Graph()
+    truth.add_edges_from([("a", "b"), ("b", "c")])
+    est = nx.Graph()
+    est.add_edges_from([("a", "b")])
+    feature_names = ["a", "b", "c"]
+    return truth, est, feature_names
+
+
+def test_metrics_initialization_and_to_dict(metrics_instance, sid_statistics):
+    result = metrics_instance.to_dict()
+    assert result["Tp"] == 3
+    assert result["Tn"] == 5
+    assert result["Fn"] == 2
+    assert result["Fp"] == 1
+    assert metrics_instance.ishd == pytest.approx(1 - (2 / 3))
+    assert metrics_instance.sid_lower == sid_statistics["sidLowerBound"]
+    assert metrics_instance.sid_upper == sid_statistics["sidUpperBound"]
+
+
+def test_metrics_str_and_matplotlib_repr(metrics_instance):
+    text = str(metrics_instance)
+    assert "Precision: 0.75" in text
+    assert "Recall...: 0.6" in text
+    assert "[1.0..3.0]" in text
+    plt_text = metrics_instance.matplotlib_repr()
+    assert "> Precision: 0.75" in plt_text
+    assert "> SID......: 2.0" in plt_text
+
+
+def test_metrics_handles_zero_errors_in_str():
+    metrics = Metrics(
+        Tp=1,
+        Tn=0,
+        Fn=0,
+        Fp=0,
+        precision=1.0,
+        recall=1.0,
+        aupr=1.0,
+        f1=1.0,
+        shd=0,
+        sid={"sid": 0.0, "sidLowerBound": 0.0, "sidUpperBound": 0.0},
+    )
+    sid_line = str(metrics).splitlines()[-1]
+    assert "[" not in sid_line
+    assert metrics.ishd == 0.0
+    assert "> SID......: 0.0" in metrics.matplotlib_repr()
+
+
+def test_shallow_copy_isolated_from_original():
+    graph = nx.DiGraph()
+    graph.add_edges_from([("a", "b"), ("b", "c")])
+    copy = _shallow_copy(graph)
+    assert isinstance(copy, nx.DiGraph)
+    assert set(copy.edges()) == {("a", "b"), ("b", "c")}
+    copy.add_edge("c", "a")
+    assert ("c", "a") not in graph.edges()
+
+
+def test_evaluate_graph_returns_none_when_truth_missing():
+    predicted = nx.DiGraph()
+    predicted.add_edge("a", "b")
+    assert evaluate_graph(None, predicted) is None
+
+
+def test_evaluate_graph_computes_metrics_for_directed_graphs(directed_graph_pair):
+    truth, est, _ = directed_graph_pair
+    metrics = evaluate_graph(truth, est)
+    assert metrics.Tp == 1
+    assert metrics.Tn == 3
+    assert metrics.Fn == 1
+    assert metrics.Fp == 1
+    assert metrics.shd == 2
+    assert metrics.sid == 3
+    assert metrics.aupr == pytest.approx(5 / 9)
+
+
+def test_evaluate_graph_handles_missing_nodes_and_feature_names():
+    """Prediction graphs missing nodes must still produce valid metrics."""
+    truth = nx.DiGraph()
+    truth.add_edges_from([("a", "b"), ("b", "c")])
+    truth.add_node("d")
+    predicted = nx.DiGraph()
+    predicted.add_edge("a", "b")
+    metrics = evaluate_graph(truth, predicted,
+                             feature_names=["a", "b", "c", "d"])
+    assert metrics.Tp == 1
+    assert metrics.Tn == 10
+    assert metrics.Fn == 1
+    assert metrics.Fp == 0
+    assert metrics.sid == 2
+    assert metrics.aupr == pytest.approx(0.78125)
+
+
+def test_evaluate_graph_double_for_anticausal_toggle():
+    """SHD drops when reversed edges are not double-counted."""
+    truth = nx.DiGraph()
+    truth.add_edge("a", "b")
+    predicted = nx.DiGraph()
+    predicted.add_edge("b", "a")
+    default_metrics = evaluate_graph(truth, predicted)
+    relaxed_metrics = evaluate_graph(
+        truth, predicted, double_for_anticausal=False)
+    assert default_metrics.shd == 2
+    assert relaxed_metrics.shd == 1
+
+
+def test_evaluate_graph_mismatched_directedness_raises():
+    """Different graph types currently trigger an assertion."""
+    truth = nx.Graph()
+    truth.add_edge("a", "b")
+    predicted = nx.DiGraph()
+    predicted.add_edge("a", "b")
+    with pytest.raises(AssertionError):
+        evaluate_graph(truth, predicted)
+
+
+def test_conf_mat_directed_wrapper(directed_graph_pair):
+    truth, est, feature_names = directed_graph_pair
+    assert _conf_mat(truth, est, feature_names) == (1, 3, 1, 1)
+
+
+def test_conf_mat_undirected_wrapper(undirected_graph_pair):
+    truth, est, feature_names = undirected_graph_pair
+    assert _conf_mat(truth, est, feature_names) == (1, 1, 0, 1)
+
+
+def test_confusion_matrix_directed_branch():
+    graph = nx.DiGraph()
+    graph.add_nodes_from(["a", "b"])
+    metrics = {
+        "_Gm": np.array([[0, 1], [0, 0]], dtype=int),
+        "_gm": np.array([[0, 1], [0, 0]], dtype=int),
+    }
+    assert _confusion_matrix(graph, metrics) == (1, 1, 0, 0)
+
+
+def test_confusion_matrix_undirected_branch():
+    graph = nx.Graph()
+    graph.add_nodes_from(["a", "b"])
+    metrics = {
+        "_Gm": np.array([[0, 1], [1, 0]], dtype=int),
+        "_gm": np.array([[0, 0], [0, 0]], dtype=int),
+    }
+    assert _confusion_matrix(graph, metrics) == (0, 0, -1, 0)
+
+
+def test_confusion_matrix_rejects_unknown_graph_type():
+    """The helper validates that the graph is a supported NetworkX type."""
+    metrics = {"_Gm": np.zeros((1, 1)), "_gm": np.zeros((1, 1))}
+    with pytest.raises(TypeError):
+        _confusion_matrix(object(), metrics)
+
+
+def test_shd_counts_directional_disagreements_twice():
+    metrics = {
+        "_Gm": np.array([[0, 1], [0, 0]]),
+        "_gm": np.array([[0, 0], [1, 0]]),
+        "_double_for_anticausal": True,
+    }
+    assert _SHD(metrics) == 2
+    metrics["_double_for_anticausal"] = False
+    assert _SHD(metrics) == 1
+
+
+def test_shd_zero_for_identical_matrices():
+    metrics = {
+        "_Gm": np.zeros((2, 2), dtype=int),
+        "_gm": np.zeros((2, 2), dtype=int),
+        "_double_for_anticausal": True,
+    }
+    assert _SHD(metrics) == 0
 
 
 # Two identical graphs are compared.

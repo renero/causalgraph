@@ -10,7 +10,7 @@ def run(variant, data, loss, loss_grad, **kwargs):
 
 def notears_standard(
         data, loss, loss_grad, c=0.25, r=10.0, e=1e-8, rnd_W_init=False,
-        output_all_progress=False, verbose=False):
+        output_all_progress=False, verbose=False, max_iter=None):
     """
     Runs NOTEARS algorithm.
 
@@ -73,9 +73,11 @@ def notears_standard(
         W_star.x = W_star.x.reshape(W.shape).astype(dtype=np.float64)
         return W_star
 
+    it = 0
     while True:
+        it += 1
         W_star = get_W_star(p, W, a)
-        W_star = W_star['x']
+        W_star = W_star.x
         # W_star = W_star.reshape(get_W_star(p, W, a)['x'],
         #   [d, d]).astype(dtype=np.float64)
         h_W_star = h(W_star)
@@ -98,8 +100,13 @@ def notears_standard(
             if output_all_progress:
                 return ret
             return {'h': h_W_star, 'loss': loss(W_star, data, cov, d, n), 'W': W_star}
-        if verbose:
-            print("Progress:\t h = {}\n\t\t loss = {}\n\t\t a = {}". format(
-                h_W_star, loss(W_star, data, cov, d, n), a))
+            if verbose:
+                print("Progress:\t h = {}\n\t\t loss = {}\n\t\t a = {}". format(
+                    h_W_star, loss(W_star, data, cov, d, n), a))
         a = a + p*h_W_star
         W = W_star
+        if max_iter is not None and it >= max_iter:
+            # Stop early if iteration cap reached
+            if output_all_progress:
+                return ret
+            return {'h': h_W_star, 'loss': loss(W_star, data, cov, d, n), 'W': W_star}

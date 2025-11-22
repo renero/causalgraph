@@ -629,7 +629,7 @@ class GES(object):
                 # Apply operator
                 new_A = self.insert(x, y, T, A)
                 # Compute the change in score
-                aux = na_yxT | utils.pa(y, A)
+                aux = na_yxT | utils.pa(y, A, directed_only=True)
                 old_score = cache.local_score(y, aux)
                 new_score = cache.local_score(y, aux | {x})
                 print("        new: s(%d, %s) = %0.6f old: s(%d, %s) = %0.6f" %
@@ -763,7 +763,7 @@ class GES(object):
                 # Apply operator
                 new_A = self.delete_operator(x, y, H, A)
                 # Compute the change in score
-                aux = (na_yx - set(H)) | utils.pa(y, A) | {x}
+                aux = (na_yx - set(H)) | utils.pa(y, A, directed_only=True) | {x}
                 # print(x,y,H,"na_yx:",na_yx,"old:",aux,"new:", aux - {x})
                 old_score = cache.local_score(y, aux)
                 new_score = cache.local_score(y, aux - {x})
@@ -944,10 +944,15 @@ class GES(object):
                 # Apply operator
                 new_A = self.turn(x, y, C, A)
                 # Compute the change in score
-                new_score = cache.local_score(y, utils.pa(
-                    y, A) | C | {x}) + cache.local_score(x, utils.pa(x, A) - {y})
-                old_score = cache.local_score(y, utils.pa(y, A) | C) + \
-                    cache.local_score(x, utils.pa(x, A))
+                new_score = cache.local_score(
+                    y, utils.pa(y, A, directed_only=True) | C | {x}
+                ) + cache.local_score(
+                    x, utils.pa(x, A, directed_only=True) - {y})
+                old_score = cache.local_score(
+                    y, utils.pa(y, A, directed_only=True) | C
+                ) + cache.local_score(
+                    x, utils.pa(x, A, directed_only=True)
+                )
                 print("        new score = %0.6f, old score = %0.6f, y=%d, C=%s" %
                       (new_score, old_score, y, C)) if debug > 1 else None
                 # Add to the list of valid operators
@@ -1043,10 +1048,16 @@ class GES(object):
             #   Apply operator
             new_A = self.turn(x, y, C, A)
             #   Compute the change in score
-            new_score = cache.local_score(y, utils.pa(
-                y, A) | C | {x}) + cache.local_score(x, utils.pa(x, A) | (C & na_yx))
-            old_score = cache.local_score(y, utils.pa(y, A) | C) + \
-                cache.local_score(x, utils.pa(x, A) | (C & na_yx) | {y})
+            new_score = cache.local_score(
+                y, utils.pa(y, A, directed_only=True) | C | {x}
+            ) + cache.local_score(
+                x, utils.pa(x, A, directed_only=True) | (C & na_yx)
+            )
+            old_score = cache.local_score(
+                y, utils.pa(y, A, directed_only=True) | C
+            ) + cache.local_score(
+                x, utils.pa(x, A, directed_only=True) | (C & na_yx) | {y}
+            )
             print("        new score = %0.6f, old score = %0.6f, y=%d, C=%s" %
                   (new_score, old_score, y, C)) if debug > 1 else None
             #   Add to the list of valid operators

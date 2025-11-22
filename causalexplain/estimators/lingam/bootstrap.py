@@ -139,9 +139,9 @@ class BootstrapResult(object):
         if min_causal_effect is None:
             min_causal_effect = 0.0
         else:
-            if not 0.0 < min_causal_effect:
+            if min_causal_effect < 0.0:
                 raise ValueError(
-                    "min_causal_effect must be an value greater than 0.")
+                    "min_causal_effect must be an value greater than or equal to 0.")
 
         # Count causal directions
         directions = []
@@ -219,9 +219,9 @@ class BootstrapResult(object):
         if min_causal_effect is None:
             min_causal_effect = 0.0
         else:
-            if not 0.0 < min_causal_effect:
+            if min_causal_effect < 0.0:
                 raise ValueError(
-                    "min_causal_effect must be an value greater than 0.")
+                    "min_causal_effect must be an value greater than or equal to 0.")
 
         # Count directed acyclic graphs
         dags = []
@@ -278,9 +278,9 @@ class BootstrapResult(object):
         if min_causal_effect is None:
             min_causal_effect = 0.0
         else:
-            if not 0.0 < min_causal_effect:
+            if min_causal_effect < 0.0:
                 raise ValueError(
-                    "min_causal_effect must be an value greater than 0.")
+                    "min_causal_effect must be an value greater than or equal to 0.")
 
         adjacency_matrices = np.nan_to_num(self._adjacency_matrices)
         shape = adjacency_matrices[0].shape
@@ -318,9 +318,9 @@ class BootstrapResult(object):
         if min_causal_effect is None:
             min_causal_effect = 0.0
         else:
-            if not 0.0 < min_causal_effect:
+            if min_causal_effect < 0.0:
                 raise ValueError(
-                    "min_causal_effect must be an value greater than 0.")
+                    "min_causal_effect must be an value greater than or equal to 0.")
 
         # Calculate probability
         probs = np.sum(

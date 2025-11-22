@@ -26,8 +26,6 @@ import pydot
 import pydotplus
 import torch
 
-from ..independence.edge_orientation import get_edge_orientation
-
 AnyGraph = Union[nx.Graph, nx.DiGraph]
 
 
@@ -568,6 +566,8 @@ def digraph_from_connected_features(
 
         if orientation == 0:
             print(f"Checking edge {u} -> {v}...") if verbose else None
+            # Import locally to avoid requiring heavy deps (hyppo/numba) unless needed
+            from ..independence.edge_orientation import get_edge_orientation
             orientation = get_edge_orientation(
                 X, u, v, iters=anm_iterations, method="gpr", verbose=verbose)
             if orientation == +1:

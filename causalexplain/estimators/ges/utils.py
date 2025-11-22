@@ -60,7 +60,9 @@ def na(y, x, A):
         the resulting nodes
 
     """
-    return neighbors(y, A) & adj(x, A)
+    # Treat the queried node as adjacent to itself so it can be returned
+    # when it is an undirected neighbor of y.
+    return neighbors(y, A) & (adj(x, A) | {x})
 
 
 def neighbors(i, A):
@@ -104,7 +106,7 @@ def adj(i, A):
     return set(np.where(np.logical_or(A[i, :] != 0, A[:, i] != 0))[0])
 
 
-def pa(i, A):
+def pa(i, A, directed_only=False):
     """The parents of i in A.
 
     Parameters
@@ -115,16 +117,26 @@ def pa(i, A):
         the adjacency matrix of the graph, where A[i,j] != 0 => i -> j
         and A[i,j] != 0 & A[j,i] != 0 => i - j.
 
+    directed_only : bool, optional
+        if True, only return strictly directed parents (j -> i and
+        i -> j does not hold). If False, return all adjacent nodes
+        (incoming or outgoing) to match a looser notion of parents
+        sometimes used in PDAG utilities.
+
     Returns
     -------
     nodes : set of ints
         the parent nodes
 
     """
-    return set(np.where(np.logical_and(A[:, i] != 0, A[i, :] == 0))[0])
+    if directed_only:
+        return set(np.where(np.logical_and(A[:, i] != 0, A[i, :] == 0))[0])
+    incoming = set(np.where(A[:, i] != 0)[0])
+    outgoing = set(np.where(A[i, :] != 0)[0])
+    return (incoming | outgoing) - {i}
 
 
-def ch(i, A):
+def ch(i, A, directed_only=False):
     """The children of i in A.
 
     Parameters
@@ -133,13 +145,23 @@ def ch(i, A):
         the adjacency matrix of the graph, where A[i,j] != 0 => i -> j
         and A[i,j] != 0 & A[j,i] != 0 => i - j.
 
+    directed_only : bool, optional
+        if True, only return strictly directed children (i -> j and
+        j -> i does not hold). If False, return all adjacent nodes
+        (incoming or outgoing) to match a looser notion of children
+        sometimes used in PDAG utilities.
+
     Returns
     -------
     nodes : set of ints
         the children nodes
 
     """
-    return set(np.where(np.logical_and(A[i, :] != 0, A[:, i] == 0))[0])
+    if directed_only:
+        return set(np.where(np.logical_and(A[i, :] != 0, A[:, i] == 0))[0])
+    outgoing = set(np.where(A[i, :] != 0)[0])
+    incoming = set(np.where(A[:, i] != 0)[0])
+    return (outgoing | incoming) - {i}
 
 
 def is_clique(S, A):
@@ -160,11 +182,16 @@ def is_clique(S, A):
 
     """
     S = list(S)
-    subgraph = A[S, :][:, S]
-    subgraph = skeleton(subgraph)  # drop edge orientations
-    no_edges = np.sum(subgraph != 0)
     n = len(S)
-    return no_edges == n * (n - 1)
+    if n <= 1:
+        return True
+    subgraph = A[S, :][:, S]
+    if n == 2:
+        # A single edge (in any direction) is enough for a 2-node clique
+        return bool(np.any(subgraph != 0))
+    undirected = only_undirected(subgraph)
+    no_edges = np.sum(undirected != 0)
+    return bool(no_edges == n * (n - 1))
 
 
 def is_dag(A):
@@ -221,9 +248,9 @@ def topological_ordering(A):
     while len(sinks) > 0:
         i = sinks.pop()
         ordering.append(i)
-        for j in ch(i, A):
+        for j in ch(i, A, directed_only=True):
             A[i, j] = 0
-            if len(pa(j, A)) == 0:
+            if len(pa(j, A, directed_only=True)) == 0:
                 sinks.append(j)
     # If A still contains edges there is at least one cycle
     if A.sum() > 0:
@@ -254,11 +281,15 @@ def semi_directed_paths(fro, to, A):
     """
     # NOTE: Implemented non-recursively to avoid issues with Python's
     # stack size limit
-    stack = [(fro, [], list(ch(fro, A) | neighbors(fro, A)))]
+    stack = [(fro, [], list(ch(fro, A, directed_only=True) |
+                            neighbors(fro, A)))]
     paths = []
     # Precompute the nodes that are accessible from each node for a
     # significant increase in speed
-    accessible = dict((i, ch(i, A) | neighbors(i, A)) for i in range(len(A)))
+    accessible = dict(
+        (i, ch(i, A, directed_only=True) | neighbors(i, A))
+        for i in range(len(A))
+    )
     while len(stack) > 0:
         current_node, visited, to_visit = stack[0]
         if current_node == to:
@@ -390,7 +421,7 @@ def vstructures(A):
     # parents are adjacent in A
     vstructs = []
     for c in colliders:
-        for (i, j) in itertools.combinations(pa(c, A), 2):
+        for (i, j) in itertools.combinations(pa(c, A, directed_only=True), 2):
             if A[i, j] == 0 and A[j, i] == 0:
                 # Ordering might be defensive here, as
                 # itertools.combinations already returns ordered
@@ -643,13 +674,13 @@ def pdag_to_dag(P, debug=False):
         i = 0
         while not found and i < len(P):
             # Check condition 1
-            sink = len(ch(i, P)) == 0
+            sink = len(ch(i, P, directed_only=True)) == 0
             # Check condition 2
             n_i = neighbors(i, P)
             adj_i = adj(i, P)
             adj_neighbors = np.all([adj_i - {y} <= adj(y, P) for y in n_i])
             print("   i:", i, ": n=", n_i, "adj=", adj_i,
-                  "ch=", ch(i, P)) if debug else None
+                  "ch=", ch(i, P, directed_only=True)) if debug else None
             found = sink and adj_neighbors
             # If found, orient all incident undirected edges and
             # remove i from the subgraph
@@ -762,7 +793,7 @@ def label_edges(ordered):
             # if w is not a parent of y, label all edges into y as
             # compelled, and finish this pass
             if labelled[w, y] == 0:
-                labelled[list(pa(y, labelled)), y] = COM
+                labelled[list(pa(y, labelled, directed_only=True)), y] = COM
                 end = True
                 break
             # otherwise, label w -> y as compelled
@@ -773,7 +804,11 @@ def label_edges(ordered):
             # not a parent of x, label all unknown edges (this
             # includes x -> y) into y with compelled; label with
             # reversible otherwise.
-            z_exists = len(pa(y, labelled) - {x} - pa(x, labelled)) > 0
+            z_exists = len(
+                pa(y, labelled, directed_only=True)
+                - {x}
+                - pa(x, labelled, directed_only=True)
+            ) > 0
             unknown = np.where(labelled[:, y] == UNK)[0]
             assert x in unknown
             labelled[unknown, y] = COM if z_exists else REV
