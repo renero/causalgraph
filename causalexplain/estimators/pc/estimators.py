@@ -185,6 +185,9 @@ class StructureEstimator():
                 .fillna(0)
                 .to_frame()
             )
+            # Ensure the column label is the variable name, regardless of the series'
+            # original name (pandas version differences can leave it as None or 0).
+            state_counts.columns = [variable]
 
         else:
             parents_states = [self.state_names[parent] for parent in parents]
