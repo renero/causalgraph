@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "CausalExplain"
+abstract: "Causal discovery and explainability framework supporting the ReX methodology."
+version: 1.0.0
+date-released: 2025-09-23
+repository-code: "https://github.com/renero/causalgraph"
+
+authors:
+  - family-names: "Renero"
+    given-names: "Jesús"
+    orcid: "https://orcid.org/0009-0005-0449-2123"
+  - family-names: "Maestre"
+    given-names: "Roberto"
+    orcid: "https://orcid.org/0000-0002-8272-893X"
+  - family-names: "Ochoa"
+    given-names: "Idoia"
+    orcid: "https://orcid.org/0000-0003-1864-7868"
+
+preferred-citation:
+  type: article
+  title: "ReX: Causal discovery based on machine learning and explainability techniques"
+  authors:
+    - family-names: "Renero"
+      given-names: "Jesús"
+      orcid: "https://orcid.org/0009-0005-0449-2123"
+    - family-names: "Maestre"
+      given-names: "Roberto"
+      orcid: "https://orcid.org/0000-0002-8272-893X"
+    - family-names: "Ochoa"
+      given-names: "Idoia"
+      orcid: "https://orcid.org/0000-0003-1864-7868"
+  journal: "Pattern Recognition"
+  volume: "172"
+  pages: "112491"
+  year: 2026
+  doi: "10.1016/j.patcog.2025.112491"
+  url: "https://doi.org/10.1016/j.patcog.2025.112491"

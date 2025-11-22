@@ -183,3 +183,42 @@ $ python -m causalexplain -d /path/to/toy_dataset.csv -m cam -t /path/to/toy_dat
 For more information on command line options, run `causalexplain -h` or go to
 the [Quickstart](https://renero.github.io/causalgraph/quickstart.html)
 section in the documentation.
+
+
+## Citation
+
+If you use **CausalExplain**, please cite the **software** and/or the **related publication** below.
+
+### Software
+> Renero, J. (2025). *CausalExplain* (Version 1.0.0).
+> Available at: [https://github.com/renero/causalgraph](https://github.com/renero/causalgraph)
+
+**BibTeX**
+```bibtex
+@software{causalexplain_software,
+  author  = {Jesús Renero},
+  title   = {CausalExplain},
+  version = {1.0.0},
+  url     = {https://github.com/renero/causalgraph},
+  date    = {2025-09-23}
+}
+```
+
+### Related Publication
+
+> Renero, J., Maestre, R., & Ochoa, I. (2026). ReX: Causal discovery based on machine learning and explainability techniques.
+> *Pattern Recognition, 172*, 112491. [https://doi.org/10.1016/j.patcog.2025.112491](https://doi.org/10.1016/j.patcog.2025.112491)
+
+**BibTeX**
+```bibtex
+@article{Renero2026ReX,
+  author  = {Jesús Renero and Roberto Maestre and Idoia Ochoa},
+  title   = {ReX: Causal discovery based on machine learning and explainability techniques},
+  journal = {Pattern Recognition},
+  volume  = {172},
+  pages   = {112491},
+  year    = {2026},
+  doi     = {10.1016/j.patcog.2025.112491},
+  url     = {https://doi.org/10.1016/j.patcog.2025.112491}
+}
+````
