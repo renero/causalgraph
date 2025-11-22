@@ -4,7 +4,7 @@ title: "CausalExplain"
 abstract: "Causal discovery and explainability framework supporting the ReX methodology."
 version: 1.0.0
 date-released: 2025-09-23
-repository-code: "https://github.com/renero/causalgraph"
+repository-code: "https://github.com/renero/causalexplain"
 
 authors:
   - family-names: "Renero"

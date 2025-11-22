@@ -1,12 +1,12 @@
-![logo](https://raw.githubusercontent.com/renero/causalgraph/main/docs/_static/logo-light.png)
+![logo](https://raw.githubusercontent.com/renero/causalexplain/main/docs/_static/logo-light.png)
 
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/downloads/release/python-31012/)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS-lightgrey.svg)](#)
 [![PyPI version](https://badge.fury.io/py/causalexplain.svg)](https://badge.fury.io/py/causalexplain)
-[![Build Status](https://github.com/renero/causalgraph/actions/workflows/build.yaml/badge.svg)](https://github.com/renero/causalgraph/actions/workflows/build.yaml)
-[![codecov](https://codecov.io/gh/renero/causalgraph/graph/badge.svg?token=HCV0IJDFLQ)](https://codecov.io/gh/renero/causalgraph)
-[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue.svg)](https://renero.github.io/causalgraph/)
+[![Build Status](https://github.com/renero/causalexplain/actions/workflows/build.yaml/badge.svg)](https://github.com/renero/causalexplain/actions/workflows/build.yaml)
+[![codecov](https://codecov.io/gh/renero/causalexplain/graph/badge.svg?token=HCV0IJDFLQ)](https://codecov.io/gh/renero/causalexplain)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue.svg)](https://renero.github.io/causalexplain/)
 
 
 # CausalExplain - A library to infer causal-effect relationships from tabular data
@@ -39,7 +39,7 @@ discovery, **ReX** bridges the gap between predictive modeling and causal
 inference, offering an effective tool for understanding complex causal
 structures.
 
-![ReX Schema](https://raw.githubusercontent.com/renero/causalgraph/main/docs/_static/REX.png)
+![ReX Schema](https://raw.githubusercontent.com/renero/causalexplain/main/docs/_static/REX.png)
 
 Our experimental results, conducted on five families of synthetic datasets with
 varying complexity, demonstrate that REX consistently recovers true causal
@@ -181,7 +181,7 @@ $ python -m causalexplain -d /path/to/toy_dataset.csv -m cam -t /path/to/toy_dat
 ```
 
 For more information on command line options, run `causalexplain -h` or go to
-the [Quickstart](https://renero.github.io/causalgraph/quickstart.html)
+the [Quickstart](https://renero.github.io/causalexplain/quickstart.html)
 section in the documentation.
 
 
@@ -191,7 +191,7 @@ If you use **CausalExplain**, please cite the **software** and/or the **related 
 
 ### Software
 > Renero, J. (2025). *CausalExplain* (Version 1.0.0).
-> Available at: [https://github.com/renero/causalgraph](https://github.com/renero/causalgraph)
+> Available at: [https://github.com/renero/causalexplain](https://github.com/renero/causalexplain)
 
 **BibTeX**
 ```bibtex
@@ -199,7 +199,7 @@ If you use **CausalExplain**, please cite the **software** and/or the **related 
   author  = {Jesús Renero},
   title   = {CausalExplain},
   version = {1.0.0},
-  url     = {https://github.com/renero/causalgraph},
+  url     = {https://github.com/renero/causalexplain},
   date    = {2025-09-23}
 }
 ```
