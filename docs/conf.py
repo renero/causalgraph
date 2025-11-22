@@ -82,7 +82,7 @@ html_theme = 'pydata_sphinx_theme'
 
 # PyData theme options
 html_theme_options = {
-    "github_url": "https://github.com/renero/causalgraph",
+    "github_url": "https://github.com/renero/causalexplain",
     "use_edit_page_button": True,
     "show_toc_level": 2,
     "navigation_depth": 4,
@@ -92,7 +92,7 @@ html_theme_options = {
     "icon_links": [
         {
             "name": "GitHub",
-            "url": "https://github.com/renero/causalgraph",
+            "url": "https://github.com/renero/causalexplain",
             "icon": "fab fa-github-square",
             "type": "fontawesome",
         },
@@ -107,7 +107,7 @@ html_context = {
     "default_mode": "light",
     "doc_path": "docs",
     "github_user": "renero",
-    "github_repo": "causalgraph",
+    "github_repo": "causalexplain",
     "github_version": "main",
 }
 
@@ -121,4 +121,4 @@ html_js_files = [
 ]
 
 # GitHub Pages specific settings
-html_baseurl = 'https://renero.github.io/causalgraph/'
+html_baseurl = 'https://renero.github.io/causalexplain/'
